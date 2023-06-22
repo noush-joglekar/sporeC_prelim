@@ -1,0 +1,323 @@
+import snakemake.utils
+import itertools
+
+snakemake.utils.min_version("7.0.0")
+
+configfile: "/gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/v0.analysis/scripts/snakeFiles/snakeFileConfigs/config_bulk_rnaSeq.yaml"
+
+# define samples
+
+samples = ["GM12878_WholeCell","GM12878_Nuclear","GM12878_Cytosolic"]
+replicates = ["Rep1", "Rep2"]
+
+experiments = ["WholeCell","Nuclear","Cytosolic"]
+comparisons=list(itertools.combinations(experiments, 2))
+comps1 = [c[0] for c in comparisons]
+comps2 = [c[1] for c in comparisons]
+
+### RULES ###
+rule all:
+    input:
+        expand("{sample}_{rep}/featureCountsOut/{sample}_{rep}.gene.counts.txt",sample=samples,rep=replicates),
+        expand("{sample}_{rep}/spliceq/{sample}_{rep}.SE.tsv",sample=samples,rep=replicates),
+        expand("{sample}/rMATs/",sample=samples)
+        #expand("{comp1}_{comp2}/rMATs/", comp1=comps1, comp2=comps2)
+
+# bulk
+rule BULK_star_align:
+    """Perform a STAR alignment of the raw fastq files for the sample against hg38.
+
+    Input:
+        raw FASTQ file directory path containig the bulk RNA-seq data for the sample.
+    Output:
+        alignment SAM file.
+    """
+    input:
+        reads1=lambda wildcards: ancient(expand("fastqs/{sample}_{rep}_Read1.fastq.gz", sample=wildcards.sample, rep=wildcards.rep)),
+        reads2=lambda wildcards: ancient(expand("fastqs/{sample}_{rep}_Read2.fastq.gz", sample=wildcards.sample, rep=wildcards.rep))
+    output:
+        "{sample}_{rep}/STAR_alignment/{sample}_{rep}.Log.final.out"
+    threads:
+        8
+    resources:
+        mem_mb=64000, cpus=8
+    shell:
+        """
+        {config[STAR]} \
+        --runMode alignReads \
+        --genomeDir {config[star_index]} \
+        --outSAMmultNmax -1 \
+        --readFilesCommand zcat \
+        --outFilterMultimapNmax 1 --outFilterIntronMotifs RemoveNoncanonical \
+        --outFilterMismatchNmax 5 --alignSJDBoverhangMin 6 --alignSJoverhangMin 6 \
+        --outFilterType BySJout --alignIntronMin 25 --alignIntronMax 1000000 --outSAMstrandField intronMotif \
+        --runThreadN 24\
+        --alignMatesGapMax 1000000 \
+        --readNameSeparator space \
+        --outSAMunmapped Within KeepPairs \
+        --outSAMtype SAM \
+        --outFileNamePrefix {wildcards.sample}_{wildcards.rep}/STAR_alignment/{wildcards.sample}_{wildcards.rep}. \
+        --readFilesIn {input.reads1} {input.reads2}
+        """
+
+
+rule BULK_create_indexed_bam:
+    """Rename read groups in the input SAM file and output a BAM file.
+
+    Input:
+        SAM file from STAR alignment.
+    Output:
+        BAM file with read groups renamed.
+    """
+    input:
+        lambda wildcards: ancient(expand("{sample}_{rep}/STAR_alignment/{sample}_{rep}.Log.final.out", sample=wildcards.sample, rep=wildcards.rep))
+    output:
+        "{sample}_{rep}/STAR_alignment/{sample}_{rep}.Aligned.out.WithReadGroup.sorted.bam"
+    threads:
+        1
+    resources:
+        mem_mb=lambda _, attempt: 8000 + ((attempt - 1) * 8000)
+    shell:
+        """
+        {config[picard]} AddOrReplaceReadGroups \
+        INPUT={wildcards.sample}_{wildcards.rep}/STAR_alignment/{wildcards.sample}_{wildcards.rep}.Aligned.out.sam \
+        OUTPUT={wildcards.sample}_{wildcards.rep}/STAR_alignment/{wildcards.sample}_{wildcards.rep}.Aligned.out.WithReadGroup.sorted.bam \
+        SORT_ORDER=coordinate \
+        RGID={wildcards.sample}_{wildcards.rep} \
+        RGLB={wildcards.sample}_{wildcards.rep} \
+        RGDS=\"hg38\" \
+        RGPL=Illumina \
+        RGPU=1 \
+        RGSM={wildcards.sample} \
+        RGCN=\"SR_Bulk\" \
+        RGDT=`date --iso-8601`
+        """
+
+
+rule BULK_qc_mark_duplicates:
+    """Mark duplicate reads using picard.
+
+    Input:
+        BAM file with renamed read groups.
+    Output:
+        BAM file with duplicate reads marked (but not deleted).
+    """
+    input:
+        lambda wildcards: ancient(expand("{sample}_{rep}/STAR_alignment/{sample}_{rep}.Aligned.out.WithReadGroup.sorted.bam", sample=wildcards.sample,rep=wildcards.rep))
+    output:
+        "{sample}_{rep}/STAR_alignment/{sample}_{rep}.Aligned.out.WithReadGroup.sorted.markdup.bam",
+        "{sample}_{rep}/qc/{sample}_{rep}.dedup.metrics"
+    shell:
+        """
+        {config[picard]} MarkDuplicates \
+        I={wildcards.sample}_{wildcards.rep}/STAR_alignment/{wildcards.sample}_{wildcards.rep}.Aligned.out.WithReadGroup.sorted.bam \
+        O={wildcards.sample}_{wildcards.rep}/STAR_alignment/{wildcards.sample}_{wildcards.rep}.Aligned.out.WithReadGroup.sorted.markdup.bam \
+        METRICS_FILE={wildcards.sample}_{wildcards.rep}/qc/{wildcards.sample}_{wildcards.rep}.dedup.metrics \
+        ASSUME_SORTED=TRUE
+        """
+
+
+rule BULK_qc_read_GC:
+    """Measure GC content.
+
+    Input:
+        Sorted BAM file.
+    Output:
+        GC content distribution.
+    """
+    input:
+        lambda wildcards: ancient(expand("{sample}_{rep}/STAR_alignment/{sample}_{rep}.Aligned.out.WithReadGroup.sorted.bam", sample=wildcards.sample, rep=wildcards.rep))
+    output:
+        "{sample}_{rep}/qc/{sample}_{rep}.GC.xls",
+        "{sample}_{rep}/qc/{sample}_{rep}.GC_plot.r",
+        "{sample}_{rep}/qc/{sample}_{rep}.GC_plot.pdf"
+    conda:
+        "ymls/rseqc.yml"
+    resources:
+        mem_mb=lambda _, attempt: 8000 + ((attempt - 1) * 4000)
+    shell:
+        """
+        python2 /nfs/sw/rseqc/rseqc-2.6.1/bin/read_GC.py \
+        -i {wildcards.sample}_{wildcards.rep}/STAR_alignment/{wildcards.sample}_{wildcards.rep}.Aligned.out.WithReadGroup.sorted.bam \
+        -o {wildcards.sample}_{wildcards.rep}/qc/{wildcards.sample}_{wildcards.rep}
+        """
+
+
+rule BULK_qc_inner_distance:
+    """Calculate the inner distance (insert size) between two paired RNA reads.
+
+    Input:
+        Sorted BAM file.
+    Output:
+        Inner distance distribution.
+    """
+    input:
+        lambda wildcards: ancient(expand("{sample}_{rep}/STAR_alignment/{sample}_{rep}.Aligned.out.WithReadGroup.sorted.bam", sample=wildcards.sample, rep=wildcards.rep))
+    output:
+        "{sample}_{rep}/qc/{sample}_{rep}.inner_distance_plot.r"
+    conda:
+        "ymls/rseqc.yml"
+    resources:
+        mem_mb=lambda _, attempt: 16000 + ((attempt - 1) * 2000)
+    shell:
+        """
+        python2 /nfs/sw/rseqc/rseqc-2.6.1/bin/inner_distance.py \
+        -k 20000000 \
+        -u 500 \
+        -r {config[rseqc_annotation]} \
+        -i {wildcards.sample}_{wildcards.rep}/STAR_alignment/{wildcards.sample}_{wildcards.rep}.Aligned.out.WithReadGroup.sorted.bam \
+        -o {wildcards.sample}_{wildcards.rep}/qc/{wildcards.sample}_{wildcards.rep}1G
+        """
+
+
+rule BULK_summarise:
+    """Create an RNA-seq metrics report.
+
+    Input:
+        Sorted BAM file.
+    Output:
+        PDF report.
+    """
+    input:
+        lambda wildcards: ancient(expand("{sample}_{rep}/STAR_alignment/{sample}_{rep}.Aligned.out.WithReadGroup.sorted.bam", sample=wildcards.sample, rep=wildcards.rep))
+    output:
+        "{sample}_{rep}/qc/{sample}_{rep}.RNAMetrics.metrics"
+    shell:
+        """
+        {config[picard]} CollectRnaSeqMetrics \
+        INPUT={wildcards.sample}_{wildcards.rep}/STAR_alignment/{wildcards.sample}_{wildcards.rep}.Aligned.out.WithReadGroup.sorted.bam \
+        OUTPUT={wildcards.sample}_{wildcards.rep}/qc/{wildcards.sample}_{wildcards.rep}.RNAMetrics.metrics \
+        REF_FLAT={config[picard_ref_flat]} \
+        STRAND=SECOND_READ_TRANSCRIPTION_STRAND \
+        CHART={wildcards.sample}_{wildcards.rep}/qc/{wildcards.sample}_{wildcards.rep}.RNAMetrics.pdf \
+        METRIC_ACCUMULATION_LEVEL=ALL_READS
+        """
+
+
+rule BULK_featureCounts:
+    """Count the reads which map to each genomic feature.
+
+    Input:
+        Sorted BAM file.
+    Output:
+        Feature counts.
+    """
+    input:
+        # collect QC and duplicate marked output
+        lambda wildcards: ancient(expand("{sample}_{rep}/qc/{sample}_{rep}.RNAMetrics.metrics", sample=wildcards.sample,rep=wildcards.rep)),
+        lambda wildcards: ancient(expand("{sample}_{rep}/qc/{sample}_{rep}.GC_plot.pdf", sample=wildcards.sample,rep=wildcards.rep)),
+        #lambda wildcards: ancient(expand("{sample}/qc/{sample}.inner_distance_plot.r", sample=wildcards.sample)),
+        # required read input
+        reads=lambda wildcards: ancient(expand("{sample}_{rep}/STAR_alignment/{sample}_{rep}.Aligned.out.WithReadGroup.sorted.markdup.bam", sample=wildcards.sample,rep=wildcards.rep)),
+    output:
+        counts="{sample}_{rep}/featureCountsOut/{sample}_{rep}.counts.txt",
+        gene_counts="{sample}_{rep}/featureCountsOut/{sample}_{rep}.gene.counts.txt"
+    threads:
+        8
+    resources:
+        mem_mb=16000,
+        cpus=1
+    shell:
+        """
+        /nfs/sw/subread/subread-2.0.3/bin/featureCounts \
+        -p \
+        --countReadPairs \
+        -T {threads} \
+        -a {config[featureCounts_annotation]} \
+        -o {wildcards.sample}_{wildcards.rep}/featureCountsOut/{wildcards.sample}_{wildcards.rep}.counts.txt \
+        {input.reads} && \
+        cut -f1,7- {output.counts} | sed 1d > {output.gene_counts}
+        """
+
+
+rule BULK_prep_rMATS_input:
+    """ rMATS requires txt files as input so making them first
+    Input: Sorted BAM files
+    Output: txt file containing path to bam
+    """
+    input:
+       lambda wildcards: ancient(expand("{sample}_{rep}/STAR_alignment/{sample}_{rep}.Aligned.out.WithReadGroup.sorted.markdup.bam", sample=samples, rep=replicates))
+    output:
+       "rmats_input/{sample}.txt"
+    shell:
+      """
+       bash {config[rmats_inputBash]} \
+       {wildcards.sample} {output}
+       """
+
+rule BULK_spliceEfficiency:
+    """ Get the splicing efficiency (SE) for each sample
+    Input:
+        Sorted BAM file
+    Output:
+        tsv file containing splicing efficiency
+    """
+    input:
+        lambda wildcards: ancient(expand("{sample}_{rep}/STAR_alignment/{sample}_{rep}.Aligned.out.WithReadGroup.sorted.markdup.bam", sample=samples, rep=replicates))
+    output:
+        "{sample}_{rep}/spliceq/{sample}_{rep}.SE.tsv"
+    threads:
+        8
+    shell:
+        """
+        {config[spliceQ]} \
+            -b {wildcards.sample}_{wildcards.rep}/STAR_alignment/{wildcards.sample}_{wildcards.rep}.Aligned.out.WithReadGroup.sorted.markdup.bam \
+            -g {config[rmats_annotation]} \
+            -p 8 -o {wildcards.sample}_{wildcards.rep}/spliceq/{wildcards.sample}_{wildcards.rep}.SE.tsv
+        """
+
+rule BULK_rMATS:
+    """Get counts for exon and exon-junction spanning reads
+    Input:
+        Sorted BAM file per sample
+    Output:
+        Output directory containing [AS_Event].MATS junction and exon counts
+    """
+    input:
+        lambda wildcards: ancient(expand("rmats_input/{sample}.txt", sample=wildcards.sample)),
+    output:
+        main=directory("{sample}/rMATs/"),
+	    td=directory("{sample}/tmpDir")
+    threads:
+        8
+    resources:
+        mem_mb=16000,
+        cpus=1
+    shell:
+        """
+        python {config[rMATS]} \
+        --b1 rmats_input/{wildcards.sample}.txt \
+        --gtf {config[rmats_annotation]} \
+        -t paired --readLength 50 --nthread 8 \
+        --statoff --variable-read-length \
+        --od {wildcards.sample}/rMATs/ --tmp {wildcards.sample}/tmpDir/
+        """
+
+# rule BULK_rMATS_compare:
+#     """Get counts for exon and exon-junction spanning reads
+#     Input:
+#         Two bam files to compare
+#     Output:
+#         Output directory containing [AS_Event].MATS junction and exon counts
+#     """
+#     input:
+#         b1=lambda wildcards: ancient(expand("rmats_input/GM12878_{comp1}.txt", comp1=wildcards.comp1)),
+#         b2=lambda wildcards: ancient(expand("rmats_input/GM12878_{comp2}.txt", comp2=wildcards.comp2))
+#     output:
+#         main=directory("{comp1}_{comp2}/rMATs/"),
+#         td=directory("{comp1}_{comp2}/tmpDir")
+#     threads:
+#         8
+#     resources:
+#         mem_mb=16000,
+#         cpus=1
+#     shell:
+#         """
+#         python {config[rMATS]} \
+#         --b1 {input.b1} --b2 {input.b2} \
+#         --gtf {config[rmats_annotation]} \
+#         -t paired --readLength 50 --nthread 8 \
+#         --statoff \
+#         --variable-read-length \
+#         --od {output.main} --tmp {output.td}
+#         """

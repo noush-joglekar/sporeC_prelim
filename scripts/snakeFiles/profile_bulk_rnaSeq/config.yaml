@@ -1,0 +1,27 @@
+cluster:
+  mkdir -p logs/rnaseq_nygc/{rule} &&
+  sbatch
+    --partition=pe2
+    --cpus-per-task={threads}
+    --mem={resources.mem_mb}
+    --job-name=smk-{rule}-{wildcards}
+    --output=logs/rnaseq_nygc/{rule}/{rule}-{wildcards}-%j.out
+    --parsable
+resources:
+  - mem_mb=32000
+  - cpus=1
+max-jobs-per-second: 1
+max-status-checks-per-second: 1
+local-cores: 1
+latency-wait: 240
+jobs: 500
+restart-times: 3
+keep-going: True
+rerun-incomplete: True
+printshellcmds: True
+scheduler: "greedy"
+use-conda: True
+
+printshellcmds: True
+cluster-cancel: scancel
+cluster-cancel-nargs: 50

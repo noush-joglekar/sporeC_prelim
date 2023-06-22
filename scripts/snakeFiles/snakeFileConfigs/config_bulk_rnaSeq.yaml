@@ -1,0 +1,31 @@
+cluster:
+  mkdir -p logs/nygc/{rule} &&
+  sbatch
+    --job-name=smk-{rule}-{wildcards}
+    --output=logs/nygc/{rule}/{rule}-{wildcards}-%j.out
+    --parsable # Required to pass job IDs to scancel
+jobs: 100
+printshellcmds: True
+cluster-cancel: scancel
+cluster-cancel-nargs: 50
+
+
+# global variables
+picard_strand: "SECOND_READ_TRANSCRIPTION_STRAND"
+
+# file paths
+workdir: "/gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/2023_03_01_v0_dataGathering/2023_03_06_GM12878_cellularFractionData/"
+featureCounts_annotation: "/gpfs/commons/groups/gursoy_lab/cwalker/projects/sc_privacy/data/reference/refdata-gex-GRCh38-2020-A/genes/genes.gtf"
+picard_ref_flat: "/gpfs/commons/groups/gursoy_lab/cwalker/projects/sc_privacy/data/reference/hg38/gencode/refFlat.txt"
+rseqc_annotation: "/gpfs/commons/groups/gursoy_lab/cwalker/projects/sc_privacy/data/reference/hg38/gencode/hg38_GENCODE.v39.bed"
+star_index: "/gpfs/commons/groups/gursoy_lab/cwalker/projects/sc_privacy/data/reference/refdata-gex-GRCh38-2020-A/star"
+grch38_index: "/gpfs/commons/groups/gursoy_lab/cwalker/projects/sc_privacy/data/reference/refdata-gex-GRCh38-2020-A/fasta/genome.fa.fai"
+#rmats_annotation: "/gpfs/commons/groups/gursoy_lab/ajoglekar/Support/References/Human/GRCh38/GENCODE/gencode.v42.annotation.gtf"
+rmats_annotation: "/gpfs/commons/groups/gursoy_lab/cwalker/projects/sc_privacy/data/reference/refdata-gex-GRCh38-2020-A/genes/genes.gtf"
+rmats_inputBash: "/gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/v0.analysis/scripts/bashScripts/prep_rMATs_input.bash"
+
+# tool paths
+STAR: "/nfs/sw/cellranger/cellranger-6.0.0/lib/bin/STAR"
+rMATS: "/nfs/sw/rmats/rmats-4.1.2/rmats.py"
+picard: "java -jar /nfs/sw/picard-tools/picard-tools-2.8.0/picard.jar"
+spliceQ: "/gpfs/commons/home/ajoglekar/.conda/envs/noush_base/envs/snakemake_v0/bin/SPLICE-q.py"
