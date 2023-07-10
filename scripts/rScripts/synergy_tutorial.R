@@ -1,16 +1,18 @@
 #!/bin/R
 # R version 4.1.2
 # Synergy formulation of Pore-C data: Tutorial
+## newest chromunity download
 
 scriptDir <- '/gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/v0.analysis/scripts/rScripts/'
 workingDir <- '/gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/2023_03_01_v0_dataGathering/v0_poreC_SE_interaction/'
 setwd(workingDir)
 
+devtools::install('/gpfs/commons/groups/gursoy_lab/ajoglekar/Support/Software/Packages/R/sourceInstall_fromGit/chromunity_main/chromunity')
+
 library(data.table)
 library(dplyr)
 library(rtracklayer)
 library(skitools)
-library(chromunity)
 library(MASS)
 library(chromunity)
 library(gUtils)
@@ -21,20 +23,10 @@ library(parallel)
 this_gr = readRDS(gzcon(file("https://mskilab.s3.amazonaws.com/chromunity/chr8.single.run.sub.rds")))
 this_gr$cid = this_gr$read_idx
 
-all_concatemers = unique(this_gr$read_idx)
-set.seed(125)
-training_concatemers = sample(all_concatemers, length(all_concatemers)/2)
-testing_concatemers = setdiff(all_concatemers, training_concatemers)
-
-this_gr_training = this_gr %Q% (read_idx %in% training_concatemers)
-this_gr_testing = this_gr %Q% (read_idx %in% testing_concatemers)
 
 ##
-this_gr_training$cid = this_gr_training$read_idx
-this_gr_testing$cid = this_gr_testing$read_idx
-
-##
-this_sliding_chrom = chromunity(concatemers = this_gr_training, resolution = 5e4, window.size = 2e6, mc.cores = 1)
+this_sliding_chrom = sliding_window_chromunity(concatemers = this_gr, resolution = 5e4, window.size = 2e6, 
+                                               take_sub_sample = TRUE, chr  = "chr8", subsample.frac = 0.5, mc.cores = 1)
 
 
 ## Frag counts
@@ -70,12 +62,17 @@ annotated_chrom = annotate(binsets = this_sliding_chrom$binsets,
 
 ## Background set on called chromunities
 set.seed(198)
-back_gr = gr2dt(dt2gr(background(binsets = this_sliding_chrom$binsets, n = 1000,
-                                    resolution = 5e4)))
+back_gr = sliding_window_background(chromosome= "chr8", binsets = this_sliding_chrom$binsets, n = 1000,
+                                    resolution = 5e4)
+
+back_gr[, V1 := NULL]
+back_gr = na.omit(back_gr) 
 
 ## Getting seqlengths of each chromosome
-upper.bound = as.data.table(hg_seqlengths(genome = "../v0_poreC_explore/hg38.chromSizes"), keep.rownames = T) 
+#upper.bound = as.data.table(hg_seqlengths(genome = "../v0_poreC_explore/hg38.chromSizes"), keep.rownames = T)
+upper.bound = as.data.table(hg_seqlengths(genome = "BSgenome.Hsapiens.UCSC.hg38::Hsapiens"), keep.rownames = T)
 setkeyv(back_gr, c("seqnames", "start"))
+
 back_gr = back_gr[!bid %in% back_gr[width < (5e4-1)]$bid]
 back_gr = gr2dt(gr.reduce(dt2gr(back_gr), by = "bid"))
 back_gr$bid <- as.factor(back_gr$bid)
