@@ -104,16 +104,18 @@ testFile <- dt2gr(testFile)
 # test_chr18_sliding_chrom = chromunity(concatemers = test_chr18_training,piecewise = F,
 #                                       resolution = 1e4, window.size = 2e6, mc.cores = 1)
 
-this_sliding_chrom = sliding_window_chromunity(concatemers = testFile, resolution = 5e4, window.size = 2e6, 
-                                               take_sub_sample = TRUE, chr  = "chr8", subsample.frac = 0.5, mc.cores = 1)
-## csv data:
-## Error in ifelse(is.na(tix), 0, tix) : object 'tix' not found
+debug(sliding_window_chromunity)
+this_sliding_chrom = sliding_window_chromunity(concatemers = testFile, resolution = 5e5, window.size = 2e7, 
+                                               take_sub_sample = FALSE, chr  = "chr8", subsample.frac = NULL, mc.cores = 1)
+# this_sliding_chrom = sliding_window_chromunity(concatemers = testFile, resolution = 5e4, window.size = 2e6, 
+#                                                take_sub_sample = TRUE, chr  = "chr8", subsample.frac = 0.5, mc.cores = 1)
 
 ## 
 
 ## Generate covariates ------
 ## Frag counts
-frags <- read_parquet("../v0_poreC_explore/DpnII_GRCh38.vd.fragments.parquet") %>% dt2gr()
+#frags <- read_parquet("../v0_poreC_explore/DpnII_GRCh38.vd.fragments.parquet") %>% dt2gr()
+frags = readRDS(gzcon(file("https://mskilab.s3.amazonaws.com/chromunity/Nlaiii.frags.hg38.rds"))) %>% dt2gr()
 
 ## GC content
 gc5b = readRDS(gzcon(file("https://mskilab.s3.amazonaws.com/chromunity/gc.38.rds")))
@@ -124,16 +126,17 @@ names(cov_list) <- c("score:gc.cov", "interval:frag.cov")
 gc_frag_cov = covariate(name = c("gc", "frag"), type = c("numeric", "interval"), field = c("score", NA), data = cov_list)
 
 
-# Annotating test set ------- 
+## Annotate
 ## concatemers used for testing
-test_chr8.chrom = gr2dt(test_chr8_sliding_chrom$concatemers)
+this.chrom = gr2dt(this_sliding_chrom$concatemers)
 
 ## Concatemers for testing
-this_gr_testing = dt2gr(gr2dt(this_gr)[!read_idx %in% unique(this.chrom$read_idx)]) 
+this_gr_testing = dt2gr(gr2dt(testFile)[!read_idx %in% unique(this.chrom$read_idx)]) 
 
+debug(annotate)
 annotated_chrom = annotate(binsets = this_sliding_chrom$binsets,
                            k = 5,
                            concatemers = this_gr_testing,
-                           covariates = gc_frag_cov, resolution = 5e4,
+                           covariates = gc_frag_cov, resolution = 5e5,
                            mc.cores = 3) 
 
