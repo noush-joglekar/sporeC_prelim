@@ -11,6 +11,8 @@ module load bedtools
 
 fragFile=$1;
 
+zcat frags_100db.csv.gz | awk '{FS=","; OFS="\t"; if($18=="True" && !($4~"_|EBV")) {print "Read:"$1,$9,$12} }' > readLengthAndQualities
+
 zcat $fragFile | awk '{FS=","; OFS="\t"; if($18=="True" && !($4~"_|EBV") ) {count[$1]++; \
 if(coord[$1]){coord[$1]=coord[$1]"\n"$4"\t"$5"\t"$6"\tRead:"$1}else{coord[$1]=$4"\t"$5"\t"$6"\tRead:"$1}} }END \
 {for(c in count) {if(count[c]>=2) {split(coord[c],entries,"\n"); for(en in entries) {print entries[en]"_Card:"count[c]} }} }' > fragFile.bed
