@@ -1,3 +1,7 @@
+from itertools import combinations
+import numpy as np
+import pandas as pd
+
 def makeHiC_fromInc(incDF):
     ## Convert incidence matrix to 2d hiC matrix
     nrow = incDF.shape[0]
