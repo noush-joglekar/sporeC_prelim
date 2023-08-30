@@ -119,3 +119,28 @@ class IncDFCreator:
         filtered_results = [arr for arr in res if arr is not None]
         df = pd.DataFrame(np.concatenate(filtered_results)).T
         return df
+
+class RealHiC:
+    """Make a traditional HiC matrix from distance matrices"""
+    def __init__(self, chain_dir):
+        self.chain_dir = chain_dir
+    
+    def distMatToBinary(self, file_path):
+        """If distance falls below a threshold, make entry 1 else 0"""
+        chain_mat = np.loadtxt(file_path)
+        binary_dist_mat = np.where(chain_mat <= 500, 1, 0)
+        return binary_dist_mat
+    
+    def distFilesToRealHiC(self, num_files):
+        """Binarize a whole bunch of distance matrices
+        specified by numFiles"""
+        real_hic = None
+        for i in range(1, num_files):
+            file_path = f'{self.chain_dir}chain_dist_{i}.txt'
+            if os.path.isfile(file_path):
+                binary_dist_mat = self.distMatToBinary(file_path)
+                if real_hic is None:
+                    real_hic = (binary_dist_mat / num_files)
+                else:
+                    real_hic += (binary_dist_mat / num_files)
+        return real_hic
