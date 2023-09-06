@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from itertools import combinations
 import multiprocessing
+import os
 
 def increaseIncDF_binSize(df,binSize):
     """This collapses consective bins in an incidence DF
@@ -53,9 +54,10 @@ def dictToDF(hpDict):
 
 class IncDFCreator:
     """Replacing this function: makeIncDF_fromChainDists"""
-    def __init__(self, numProcesses, cutoff, offDiagLim):
+    def __init__(self, numProcesses, prim_cutoff, sec_cutoff, offDiagLim):
         self.numProcesses = numProcesses
-        self.cutoff = cutoff
+        self.prim_cutoff = prim_cutoff
+        self.sec_cutoff = sec_cutoff
         self.offDiagLim = offDiagLim
 
     def preprocessMat(self, chainMat):
@@ -67,21 +69,23 @@ class IncDFCreator:
     def perRow(self, args):
         """Per row of upper tri matrix, get potential list of
         neighbors that fulfill distance criteria. Take iterative
-        n choose k subsets of the matrix. If all elements fall 
-        below the distance cutoff needed to make it interact, then
+        n choose k subsets of the matrix if the elements fall below 
+        primary cutoff. If all elements fall 
+        below the secondary distance cutoff needed to make it interact, then
         report that as a hyperedge"""
         chainMat_triu, row_ix = args
         columns_to_add = []
         self.nrow = chainMat_triu.shape[0]
         vec = chainMat_triu[row_ix, row_ix + self.offDiagLim:]
-        condition1 = (0 < vec)
-        condition2 = (vec < self.cutoff)
-        possNeighbors = list(np.where(condition1 & condition2)[0])
+        #condition1 = (0 < vec)
+        condition2 = (vec < self.prim_cutoff)
+        possNeighbors = [row_ix + self.offDiagLim + index for index in np.where(condition2)[0]]
+        possNeighbors.insert(0, 0)
         if possNeighbors:
             for ix in range(2, len(possNeighbors)):
                 for comb in combinations(possNeighbors, ix):
                     d = chainMat_triu[np.ix_(comb, comb)]
-                    if d.max() <= self.cutoff:
+                    if d.max() <= self.sec_cutoff:
                         new_column = np.zeros(self.nrow)
                         new_column[list(comb)] = 1
                         columns_to_add.append(new_column)
@@ -135,12 +139,17 @@ class RealHiC:
         """Binarize a whole bunch of distance matrices
         specified by numFiles"""
         real_hic = None
+        counter = 0
         for i in range(1, num_files):
             file_path = f'{self.chain_dir}chain_dist_{i}.txt'
             if os.path.isfile(file_path):
+                counter += 1
                 binary_dist_mat = self.distMatToBinary(file_path)
                 if real_hic is None:
-                    real_hic = (binary_dist_mat / num_files)
+                    real_hic = binary_dist_mat
                 else:
-                    real_hic += (binary_dist_mat / num_files)
+                    real_hic += binary_dist_mat
+        if real_hic is not None:
+            real_hic = real_hic.astype('float64')
+            real_hic /= counter
         return real_hic

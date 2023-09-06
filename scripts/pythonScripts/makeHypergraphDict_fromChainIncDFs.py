@@ -9,7 +9,7 @@ import sys
 sys.path.append('/gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/v0.analysis/scripts/pythonScripts/functions/')
 from chains import dfToDict, dictToDF
 
-## Set up. 
+## Set up.
 dataDir = '/gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/2023_03_01_v0_dataGathering/v0_hypergraphSimulations/getMultiwayInteractions_fromBPChains/'
 
 def constructFullDict(numFiles):
@@ -17,7 +17,7 @@ def constructFullDict(numFiles):
     result_dict = {}
     numEdges = []
     for ix in range(1,numFiles+1):
-        filePath = f'{dataDir}chains_10k_500_projectionMtxOutput/binConcatInc_{ix}.pkl'
+        filePath = f'{dataDir}chains_10k_500_projectionMtxOutput/binConcatInc_600_1000_{ix}.pkl'
         if os.path.isfile(filePath):
             bIncDF = pd.read_pickle(filePath)
             result_dict = dfToDict(bIncDF,result_dict)
