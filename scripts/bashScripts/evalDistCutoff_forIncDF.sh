@@ -3,12 +3,12 @@
 #SBATCH --partition=pe2   # cluster-specific
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=24
+#SBATCH --cpus-per-task=4
 #SBATCH --job-name=evalDistCutoff
-#SBATCH --time=10:00:00   # HH/MM/SS
-#SBATCH --mem=4G   # memory requested, units available: K,M,G,T
+#SBATCH --time=01:00:00   # HH/MM/SS
+#SBATCH --mem=2G   # memory requested, units available: K,M,G,T
 #SBATCH --mail-user=ajoglekar@nygenome.org
-#SBATCH --mail-type=ALL
+#SBATCH --mail-type=FAIL
 
 echo "Starting at:" `date` >> evalDistCutoff.log
 
@@ -19,17 +19,19 @@ echo "This job was assigned the temporary (local) directory:" $TMPDIR >> evalDis
 
 source activate hypergraph_poreC
 
-jobID=$1;
-distCutoff=$2;
-numThreads=$3;
-offDiagLim=$4;
+outDir=$1;
+jobID=$2;
+distCutoff_prim=$3;
+distCutoff_sec=$4;
+numThreads=$5;
+offDiagLim=$6;
 
 echo "Processing "$jobID
 
 ## IMPORTANT: Directories hard coded in python script
 
 time python /gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/v0.analysis/scripts/pythonScripts/makeProjectionMatrices.py \
-$jobID $distCutoff $numThreads --offDiagLim $offDiagLim
+$outDir $jobID $distCutoff_prim $distCutoff_sec $numThreads --offDiagLim $offDiagLim
 
 echo "Job finished or was terminated, please check logs"
 exit
