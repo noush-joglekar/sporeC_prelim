@@ -17,7 +17,7 @@ def constructFullDict(numFiles):
     result_dict = {}
     numEdges = []
     for ix in range(1,numFiles+1):
-        filePath = f'{dataDir}chains_10k_500_projectionMtxOutput/binConcatInc_600_1000_{ix}.pkl'
+        filePath = f'{dataDir}chains_10k_500_projectionMtxOutput/binConcatInc_3_600_750_{ix}.pkl'
         if os.path.isfile(filePath):
             bIncDF = pd.read_pickle(filePath)
             result_dict = dfToDict(bIncDF,result_dict)
@@ -33,8 +33,8 @@ hpEdges, numEdges = constructFullDict(numFiles)
 
 print("Constructed hyperedge dict - writing output")
 
-with open(f'{dataDir}hyperEdges_{numFiles}_chains.pkl', 'wb') as f:
+with open(f'{dataDir}hyperEdges_3_600_750_{numFiles}_chains.pkl', 'wb') as f:
     data = pickle.dump(hpEdges,f)
 
-numEdgesPath = f'{dataDir}numEdges_{numFiles}_chains.txt'
+numEdgesPath = f'{dataDir}numEdges_3_600_750_{numFiles}_chains.txt'
 np.savetxt(numEdgesPath, numEdges, delimiter='\t', fmt='%d')
