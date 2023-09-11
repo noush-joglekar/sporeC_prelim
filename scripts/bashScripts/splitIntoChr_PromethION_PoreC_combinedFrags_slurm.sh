@@ -18,10 +18,11 @@ echo "Running on cluster:" $SLURM_CLUSTER_NAME >> prometh_splitChr_preprocess.lo
 echo "This job was assigned the temporary (local) directory:" $TMPDIR >> prometh_splitChr_preprocess.log
 
 chrID=$1;
+file=$2;
 
 echo "Processing chr"$chrID
 
-awk -v chr=$chrID 'BEGIN{c=1; comm="zcat ../NlaIII_GM12878_output/batchCombined_fragFile_sorted_wClosestGene.bed.gz"; \
+awk -v chr=$chrID -v file=$file 'BEGIN{c=1; comm="zcat "file; \
 while(comm|getline) {if($1~chr) {if(!id[$4]) {id[$4]=c; c=c+1;} $15=id[$4];
 OFS="\t"; print }} }' | gzip -c > NlaIII_GM12878_chr${chrID}.gz
 
