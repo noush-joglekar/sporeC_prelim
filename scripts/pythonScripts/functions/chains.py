@@ -128,13 +128,13 @@ class RealHiC:
     """Make a traditional HiC matrix from distance matrices"""
     def __init__(self, chain_dir):
         self.chain_dir = chain_dir
-    
+
     def distMatToBinary(self, file_path):
         """If distance falls below a threshold, make entry 1 else 0"""
         chain_mat = np.loadtxt(file_path)
         binary_dist_mat = np.where(chain_mat <= 500, 1, 0)
         return binary_dist_mat
-    
+
     def distFilesToRealHiC(self, num_files):
         """Binarize a whole bunch of distance matrices
         specified by numFiles"""
