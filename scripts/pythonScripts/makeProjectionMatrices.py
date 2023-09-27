@@ -15,7 +15,7 @@ def main():
 
     fileNum = args.file_num
     outDir = f'{dataDir}{args.outDir}/'
-    
+
     ## Read in distance file
     exMat = np.loadtxt(f'{dataDir}chains_500_10000_1500_1681171613/chain_dist_{fileNum}.txt')
     print("Read in distance file, generating incidence matrix")
