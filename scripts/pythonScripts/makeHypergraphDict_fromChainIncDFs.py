@@ -14,13 +14,14 @@ dataDir = '/gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwa
 
 numFiles = int(sys.argv[1])
 offDiagDist = sys.argv[2]
+inputDir = sys.argv[3]
 
 def constructFullDict(numFiles):
     """Takes in a directory of DFs and outputs a dict"""
     result_dict = {}
     numEdges = []
     for ix in range(1,numFiles+1):
-        filePath = f'{dataDir}chains_10k_500_projectionMtxOutput/binConcatInc_{offDiagDist}_600_750_{ix}.pkl'
+        filePath = f'{dataDir}/{inputDir}/binConcatInc_{offDiagDist}_600_750_{ix}.pkl'
         if os.path.isfile(filePath):
             bIncDF = pd.read_pickle(filePath)
             result_dict = dfToDict(bIncDF,result_dict)
