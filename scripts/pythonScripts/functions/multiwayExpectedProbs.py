@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import random
+import statistics
 from itertools import combinations
 from collections import defaultdict
 from sklearn.metrics.pairwise import cosine_similarity
@@ -36,7 +37,7 @@ class multiwayEval:
             for n in range(2,card):
                 print(f"Creating a probability hash for {n}-way subsets")
                 hashID = f'{card}sub{n}'
-                probHash[hashID] = getNWayProbsPerCard(self,card,n)
+                probHash[hashID] = self.getNWayProbsPerCard(card,n)
         return(probHash)
 
     def getNWayProbsPerCard(self,card,n):
@@ -46,13 +47,13 @@ class multiwayEval:
         mainDict = defaultdict(int)
 
         for ix in ixList:
-            nWayDict = makeNWayDict(self,ix,n)
+            nWayDict = self.makeNWayDict(ix,n)
             for key in nWayDict.keys():
                 mainDict[key] += nWayDict[key]
 
-        normalized_values = getProbabilitiesByDist(mainDict)
+        normalized_values = self.getProbabilitiesByDist(mainDict)
         if self.toPlotRef is True:
-            plotReadFreqsPerCard(self,mainDict,normalized_values,card,n)
+            self.plotReadFreqsPerCard(mainDict,normalized_values,card,n)
         
         probabilityDict = {list(mainDict.keys())[ix]:normalized_values[ix] for ix in range(len(normalized_values))}
         return(probabilityDict)
@@ -67,19 +68,25 @@ class multiwayEval:
         for comb in combs:
             subsetEdge = '_'.join(map(str, comb))
             subsetEdgeReads = self.hpEdges[subsetEdge]
-            meanDist = getNWayMeanDistPerSubset(comb)
+            meanDist = self.getNWayMeanDistPerSubset(comb)
             subsetDict[meanDist] = subsetEdgeReads
         return(subsetDict)
     
-    def getNWayMeanDistPerSubset(comb):
+    def getNWayMeanDistPerSubset(self,comb):
         """Get the mean pairwise distance given a
         high cardinality read"""
         twoWays = list(combinations(comb,2))
-        twoWayDist = [getPairwiseDist(c) for c in twoWays]
+        twoWayDist = [self.getPairwiseDist(c) for c in twoWays]
         meanDist = round(statistics.mean(twoWayDist))
         return(meanDist)
     
-    def getProbabilitiesByDist(mainDict):
+    def getPairwiseDist(self,combination):
+        """Given a two-way interaction, find dist between them"""
+        ends = [int(combination[i].split(":")[1]) for i in [0,1]]
+        diff = (ends[1] - ends[0]) / 5
+        return(diff)
+    
+    def getProbabilitiesByDist(self,mainDict):
         """Get probabilities of reads occurring by mean dist to
         obtain the expected probability distribution from the data"""
         totalReadsForCard = sum(mainDict.values())
@@ -115,19 +122,19 @@ class multiwayEval:
     def statsForAllReads(self,probHash):
         """Wrapper for all reads"""
         for card in range(max(self.keyCard),3,-1):
-            corrStats, cosStats = statsForAllCardSubsets(self,card,probHash)
+            corrStats, cosStats = self.statsForAllCardSubsets(card,probHash)
             summaryCos = pd.DataFrame({'mean':cosStats.mean(axis = 1),'sem':cosStats.sem(axis = 1)})
             summaryCorr = pd.DataFrame({'mean':corrStats.mean(axis = 1),'sem':corrStats.sem(axis = 1)})
-            if self.plotScatter is True:
-                plotScatterWithErrorBars(self,summaryCos,"CosineSim",card)
-                plotScatterWithErrorBars(self,summaryCorr,"PearsonCorr",card)
-            plotSimilarityHist(self,summaryCorr['mean'],summaryCos['mean'],card)
+            if self.toPlotScatter is True:
+                self.plotScatterWithErrorBars(summaryCos,"CosineSim",card)
+                self.plotScatterWithErrorBars(summaryCorr,"PearsonCorr",card)
+            self.plotSimilarityHist(summaryCorr['mean'],summaryCos['mean'],card)
             print("Writing output")
             corrStats.to_csv(f'{self.outDir}/correlation_card{card}.csv',sep = "\t",index=False)
             cosStats.to_csv(f'{self.outDir}/cosineSim_card{card}.csv',sep = "\t",index=False)
         for card in [3]:
-            corrStats, cosStats = statsForAllCardSubsets(self,card,probHash)
-            plotSimilarityHist(self,corrStats,cosStats,card)
+            corrStats, cosStats = self.statsForAllCardSubsets(card,probHash)
+            self.plotSimilarityHist(corrStats,cosStats,card)
             print("Writing output")
             corrStats.to_csv(f'{self.outDir}/correlation_card{card}.csv',sep = "\t",index=False)
             cosStats.to_csv(f'{self.outDir}/cosineSim_card{card}.csv',sep = "\t",index=False)
@@ -145,7 +152,7 @@ class multiwayEval:
         C1 = []
         C2 = []
         for n in range(2,card):
-            stats = getStatsPerCard(self,card,n,probHash,revised_ixes)
+            stats = self.getStatsPerCard(card,n,probHash,revised_ixes)
             C1.append(stats[0])
             C2.append(stats[0])
         cN = [str(card)+"Sub"+str(i) for i in range(2,card)]
@@ -164,25 +171,25 @@ class multiwayEval:
         expHash = f'{card}sub{n}'
         for ix in revised_ixes:
             #print(ix)
-            corr, cos = getReadExpectednessStats(self,card,ix,n,probHash[expHash])
+            corr, cos = self.getReadExpectednessStats(card,ix,n,probHash[expHash])
             corrList.append(corr)
             cosList.append(cos)
         return(corrList, cosList)
     
-    def getReadExpectednessStats(self,card,ix,n,expHash):
+    def getReadExpectednessStats(self,card,ix,n,hash):
         """Per read, get the observed distribution of n-way contacts
         and calculate similarity to the expected distribution"""
-        readDict = makeNWayDict(self,ix,n)
-        readPercs = getProbabilitiesByDist(readDict)
-        probVals = [expHash[k] for k in readDict.keys()]
+        readDict = self.makeNWayDict(ix,n)
+        readPercs = self.getProbabilitiesByDist(readDict)
+        probVals = [hash[k] for k in readDict.keys()]
         if self.toPlotInd is True:
-            makeSanityCheckPlotsPerRead(readDict,readPercs,probVals,card,n)
+            self.makeSanityCheckPlotsPerRead(readDict,readPercs,probVals,card,n,ix)
         correlation = np.corrcoef(readPercs, probVals)[0, 1]
         similarity = cosine_similarity(np.array(readPercs).reshape(1,-1), 
                                     np.array(probVals).reshape(1,-1))[0,0]
         return(correlation, similarity)
 
-    def makeSanityCheckPlotsPerRead(readDict, readPercs, probVals, card, n):
+    def makeSanityCheckPlotsPerRead(self,readDict, readPercs, probVals, card, n, ix):
         """For specific reads, plot the observed versus expected distributions
         of two-way interactions along with a fitted spline. Additionally outputs
         the slope (useful only if line) and correlation values"""
@@ -224,6 +231,7 @@ class multiwayEval:
 
         # Adjust layout and show the subplots
         plt.tight_layout()
+        plt.savefig(f'{self.plotDir}/SingleReadPlot_Card{card}sub{n}_{ix}.png',bbox_inches = 'tight',facecolor = "white")
         plt.show()
         plt.close()
         return None
@@ -245,7 +253,8 @@ class multiwayEval:
         axs[1].set_title(f"Mean cosine similarity for card={card}")
         # Adjust layout
         plt.tight_layout()
-        plt.savefig(f'{self.plotDir}/Histogram_Card{card}.png',bbox_inches = 'tight',facecolor = "white")
+        plt.savefig(f'{self.plotDir}/Histogram_MeanForCard{card}.png',
+                    bbox_inches = 'tight',facecolor = "white")
         #plt.show()
         plt.close()
         return None
@@ -265,7 +274,8 @@ class multiwayEval:
         plt.ylim(-1,1)
         plt.title(f'Distribution for card={card}')
         plt.legend()
-        plt.savefig(f'{self.plotDir}/ScatterPlot_{metric}_Card{card}.png',bbox_inches = 'tight',facecolor = "white")
+        plt.savefig(f'{self.plotDir}/ScatterPlot_{metric}_Card{card}_max{self.toChoose}reads.png',
+                    bbox_inches = 'tight',facecolor = "white")
         #plt.show()
         plt.close()
         return None
