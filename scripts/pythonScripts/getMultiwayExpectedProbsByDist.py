@@ -74,6 +74,7 @@ def parse_args():
     parser.add_argument("probHashOutFile", type=str, help="Name of probability reference hash")
     parser.add_argument("seed", type=int, help="Seed for read sampling")
     parser.add_argument("sampleSize", type=int, help="Number of reads to sample")
+    parser.add_argument("quartile", type=int, help="Which quartile to set as cutoff", default = 25)
     parser.add_argument("--plotRef", action="store_true", help="Specify is you want a hist of dist stratified probabilities per card and subset")
     parser.add_argument("--plotInd", action="store_true", help="Specificy if you want an exp vs. obs of individual sampled reads")
     parser.add_argument("--plotScatter", action="store_true", help="Specify if you want a scatterplot of avg similarity measures for sampled reads")

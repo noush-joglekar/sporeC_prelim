@@ -12,7 +12,7 @@ class multiwayEval:
 
     def __init__(self, keyCard, hpEdges, hpKeys_split, seed, 
                  toChoose,toPlotRef, toPlotInd, toPlotScatter,
-                 plotDir,outDir):
+                 quartile, plotDir,outDir):
         self.keyCard = keyCard
         self.hpEdges = hpEdges
         self.hpKeys_split = hpKeys_split
@@ -21,6 +21,7 @@ class multiwayEval:
         self.toPlotInd = toPlotInd
         self.toPlotScatter = toPlotScatter
         self.toChoose = toChoose
+        self.qt = quartile
         self.plotDir = plotDir
         self.outDir = outDir
 
@@ -123,8 +124,11 @@ class multiwayEval:
         """Wrapper for all reads"""
         for card in range(max(self.keyCard),3,-1):
             corrStats, cosStats = self.statsForAllCardSubsets(card,probHash)
-            summaryCos = pd.DataFrame({'mean':cosStats.mean(axis = 1),'sem':cosStats.sem(axis = 1)})
-            summaryCorr = pd.DataFrame({'mean':corrStats.mean(axis = 1),'sem':corrStats.sem(axis = 1)})
+            summaryCos = cosStats.filter(like="Sub").agg((np.mean,np.std),axis = 1)
+            summaryCorr = corrStats.filter(like="Sub").agg((np.mean,np.std),axis = 1)
+            cosCutoff = self.getCutoff(summaryCos,self.qt)
+            status = [1 if x else 0 for x in (summaryCos['mean'] <= cosCutoff)]
+            cosStats['Status'] = status
             if self.toPlotScatter is True:
                 self.plotScatterWithErrorBars(summaryCos,"CosineSim",card)
                 self.plotScatterWithErrorBars(summaryCorr,"PearsonCorr",card)
@@ -134,11 +138,19 @@ class multiwayEval:
             cosStats.to_csv(f'{self.outDir}/cosineSim_card{card}.csv',sep = "\t",index=False)
         for card in [3]:
             corrStats, cosStats = self.statsForAllCardSubsets(card,probHash)
-            self.plotSimilarityHist(corrStats,cosStats,card)
+            cosCutoff = self.getCutoff(summaryCos,self.qt)
+            status = [1 if x else 0 for x in (summaryCos['mean'] <= cosCutoff)]
+            cosStats['Status'] = status
+            self.plotSimilarityHist(corrStats['3Sub2'],cosStats['3Sub2'],card)
             print("Writing output")
             corrStats.to_csv(f'{self.outDir}/correlation_card{card}.csv',sep = "\t",index=False)
             cosStats.to_csv(f'{self.outDir}/cosineSim_card{card}.csv',sep = "\t",index=False)
         return None
+
+    def getCutoff(self,summaryDF,quartile):
+        q = f'{quartile}%'
+        cutoff = pd.Series(summaryDF['mean']).describe()[q]
+        return(cutoff)
 
     def statsForAllCardSubsets(self,card,probHash):
         """Wrapper for the stats per card. Calculates for all subsets of a card and binds into a df"""
@@ -160,6 +172,7 @@ class multiwayEval:
         df2 = pd.DataFrame(C2).T
         df1.columns = cN
         df2.columns = cN
+        df2['Edge_ix'] = revised_ixes
         return(df1,df2)
 
     def getStatsPerCard(self,card,n,probHash,revised_ixes):
