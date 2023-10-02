@@ -126,11 +126,13 @@ class IncDFCreator:
 
 class RealHiC:
     """Make a traditional HiC matrix from distance matrices"""
-    def __init__(self, chain_dir):
+    def __init__(self, chain_dir, num_files):
         self.chain_dir = chain_dir
+        self.num_files = num_files
 
-    def distMatToBinary(self, file_path):
+    def distMatToBinary(self,ix):
         """If distance falls below a threshold, make entry 1 else 0"""
+        file_path = f'{self.chain_dir}chain_dist_{ix}.txt'
         chain_mat = np.loadtxt(file_path)
         binary_dist_mat = np.where(chain_mat <= 500, 1, 0)
         return binary_dist_mat
@@ -140,11 +142,11 @@ class RealHiC:
         specified by numFiles"""
         real_hic = None
         counter = 0
-        for i in range(1, num_files):
+        for i in range(i, num_files):
             file_path = f'{self.chain_dir}chain_dist_{i}.txt'
             if os.path.isfile(file_path):
                 counter += 1
-                binary_dist_mat = self.distMatToBinary(file_path)
+                binary_dist_mat = self.distMatToBinary(i)
                 if real_hic is None:
                     real_hic = binary_dist_mat
                 else:
