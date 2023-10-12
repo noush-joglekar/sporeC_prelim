@@ -37,3 +37,15 @@ def bounded_lengthFreq(binList):
     score = ((skip + 1) * (1-lGC))/ ((consecBinCounts + 1) * rCard)
     return(score)
 
+def finalBounded(binList):
+    ## Calculate unbounded weight per read
+    ## mathematically, W = (skip + 1) * cLength/(card * maxPossLength)
+    maxPossLen = len(binList)
+    rCard = binList.count(1)
+    ixFirst = binList.index(1)
+    ixLast = (len(binList) - 1) - binList[::-1].index(1)    ## Index base 0
+    concatemerLen = ixLast - ixFirst + 1    ## Difference w.r.t. base 0 gives 1 less so add
+    consecBinCounts = sum([binList[i:i+2]==[1,1] for i in range(len(binList)-1)])
+    skipLen = (rCard - 1 - consecBinCounts)
+    score = (skipLen + 1) * concatemerLen / (rCard * maxPossLen)
+    return(score)
