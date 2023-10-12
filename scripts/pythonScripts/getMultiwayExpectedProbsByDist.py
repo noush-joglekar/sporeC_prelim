@@ -22,6 +22,7 @@ def main():
     outDir = f'{dataDir}{workingDir}{args.outDir}/'
     probHashOutName = f'{outDir}/{args.probHashOutFile}.json'
     seed = args.seed
+    quartile = args.quartile
     toChoose = args.sampleSize
     print("Input args ------ toChoose:",toChoose)
     toPlotRef = args.plotRef
@@ -39,9 +40,9 @@ def main():
     hpKeys_split = [k.split("_") for k in hpEdges.keys()]
     keyCard = [len(item) for item in hpKeys_split]
 
-    evalInstance = multiwayEval(keyCard, hpEdges, hpKeys_split, seed, 
+    evalInstance = multiwayEval(keyCard, hpEdges, hpKeys_split, seed,
                                 toChoose, toPlotRef, toPlotInd, toPlotScatter,
-                                plotDir,outDir)
+                                quartile, plotDir,outDir)
     
     if os.path.exists(probHashOutName):
         print("Expected probabilities file already exists...moving on")

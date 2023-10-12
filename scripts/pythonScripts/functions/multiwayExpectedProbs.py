@@ -5,6 +5,7 @@ import statistics
 from itertools import combinations
 from collections import defaultdict
 from sklearn.metrics.pairwise import cosine_similarity
+from scipy.stats import wasserstein_distance
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -123,27 +124,33 @@ class multiwayEval:
     def statsForAllReads(self,probHash):
         """Wrapper for all reads"""
         for card in range(max(self.keyCard),3,-1):
-            corrStats, cosStats = self.statsForAllCardSubsets(card,probHash)
+            wDistStats, cosStats = self.statsForAllCardSubsets(card,probHash)
             summaryCos = cosStats.filter(like="Sub").agg((np.mean,np.std),axis = 1)
-            summaryCorr = corrStats.filter(like="Sub").agg((np.mean,np.std),axis = 1)
+            summaryWDist = wDistStats.filter(like="Sub").agg((np.mean,np.std),axis = 1)
             cosCutoff = self.getCutoff(summaryCos,self.qt)
-            status = [1 if x else 0 for x in (summaryCos['mean'] <= cosCutoff)]
-            cosStats['Status'] = status
+            cStatus = [1 if x else 0 for x in (summaryCos['mean'] <= cosCutoff)]
+            cosStats['Status'] = cStatus
+            wdistCutoff = self.getCutoff(summaryWDist,100 - self.qt)
+            wStatus = [1 if x else 0 for x in (summaryWDist['mean'] >= wdistCutoff)]
+            wDistStats['Status'] = wStatus
             if self.toPlotScatter is True:
                 self.plotScatterWithErrorBars(summaryCos,"CosineSim",card)
-                self.plotScatterWithErrorBars(summaryCorr,"PearsonCorr",card)
-            self.plotSimilarityHist(summaryCorr['mean'],summaryCos['mean'],card)
+                self.plotScatterWithErrorBars(summaryWDist,"WassDist",card)
+            self.plotSimilarityHist(summaryWDist['mean'],summaryCos['mean'],card)
             print("Writing output")
-            corrStats.to_csv(f'{self.outDir}/correlation_card{card}.csv',sep = "\t",index=False)
+            wDistStats.to_csv(f'{self.outDir}/wDist_card{card}.csv',sep = "\t",index=False)
             cosStats.to_csv(f'{self.outDir}/cosineSim_card{card}.csv',sep = "\t",index=False)
         for card in [3]:
-            corrStats, cosStats = self.statsForAllCardSubsets(card,probHash)
-            cosCutoff = self.getCutoff(summaryCos,self.qt)
+            wDistStats, cosStats = self.statsForAllCardSubsets(card,probHash)
+            cosCutoff = pd.Series(cosStats['3Sub2']).describe()[f'{self.qt}%']
             status = [1 if x else 0 for x in (summaryCos['mean'] <= cosCutoff)]
             cosStats['Status'] = status
-            self.plotSimilarityHist(corrStats['3Sub2'],cosStats['3Sub2'],card)
+            wdistCutoff = pd.Series(wDistStats['3Sub2']).describe()[f'{self.qt}%']
+            wStatus = [1 if x else 0 for x in (summaryWDist['mean'] <= wdistCutoff)]
+            wDistStats['Status'] = wStatus
+            self.plotSimilarityHist(wDistStats['3Sub2'],cosStats['3Sub2'],card)
             print("Writing output")
-            corrStats.to_csv(f'{self.outDir}/correlation_card{card}.csv',sep = "\t",index=False)
+            wDistStats.to_csv(f'{self.outDir}/wDist_card{card}.csv',sep = "\t",index=False)
             cosStats.to_csv(f'{self.outDir}/cosineSim_card{card}.csv',sep = "\t",index=False)
         return None
 
@@ -166,28 +173,29 @@ class multiwayEval:
         for n in range(2,card):
             stats = self.getStatsPerCard(card,n,probHash,revised_ixes)
             C1.append(stats[0])
-            C2.append(stats[0])
+            C2.append(stats[1])
         cN = [str(card)+"Sub"+str(i) for i in range(2,card)]
         df1 = pd.DataFrame(C1).T
         df2 = pd.DataFrame(C2).T
         df1.columns = cN
+        df1['Edge_ix'] = revised_ixes
         df2.columns = cN
         df2['Edge_ix'] = revised_ixes
         return(df1,df2)
 
     def getStatsPerCard(self,card,n,probHash,revised_ixes):
         """Per cardinality, get a subset of reads (for computational
-        purposes), calculate the correlation of observed n-way interactions
+        purposes), calculate the similarity of observed n-way interactions
         to the expected value, and output a list"""
-        corrList = []
+        wdistList = []
         cosList = []
         expHash = f'{card}sub{n}'
         for ix in revised_ixes:
             #print(ix)
-            corr, cos = self.getReadExpectednessStats(card,ix,n,probHash[expHash])
-            corrList.append(corr)
+            wDist, cos = self.getReadExpectednessStats(card,ix,n,probHash[expHash])
+            wdistList.append(wDist)
             cosList.append(cos)
-        return(corrList, cosList)
+        return(wdistList, cosList)
     
     def getReadExpectednessStats(self,card,ix,n,hash):
         """Per read, get the observed distribution of n-way contacts
@@ -196,18 +204,23 @@ class multiwayEval:
         readPercs = self.getProbabilitiesByDist(readDict)
         probVals = [hash[k] for k in readDict.keys()]
         if self.toPlotInd is True:
-            self.makeSanityCheckPlotsPerRead(readDict,readPercs,probVals,card,n,ix)
-        correlation = np.corrcoef(readPercs, probVals)[0, 1]
+            if len(readPercs) > 2 and len(probVals) > 2:
+                self.makeSanityCheckPlotsPerRead(readDict,readPercs,probVals,card,n,ix)
+        wDist = wasserstein_distance(readPercs, probVals)
         similarity = cosine_similarity(np.array(readPercs).reshape(1,-1), 
                                     np.array(probVals).reshape(1,-1))[0,0]
-        return(correlation, similarity)
+        return(wDist, similarity)
 
     def makeSanityCheckPlotsPerRead(self,readDict, readPercs, probVals, card, n, ix):
         """For specific reads, plot the observed versus expected distributions
         of two-way interactions along with a fitted spline. Additionally outputs
-        the slope (useful only if line) and correlation values"""
+        the slope (useful only if line) and wDist values"""
         Distances = list(readDict.keys())
         Freqs = readPercs
+        print(card,"sub",n)
+        print(ix)
+        print(Freqs)
+        print(probVals)
         
         # Create a 2x2 grid of subplots
         fig, axs = plt.subplots(2, 2, figsize=(6, 6))
@@ -231,7 +244,8 @@ class multiwayEval:
         sns.barplot(x=list(readDict.keys()), y=probVals, ax=axs[1, 1])
         axs[1, 1].set_title(f"Barplot for probVals Card{card}sub{n}")
 
-        correlation = np.corrcoef(readPercs, probVals)[0, 1]
+        #correlation = np.corrcoef(readPercs, probVals)[0, 1]
+        wDist = wasserstein_distance(readPercs, probVals)
         similarity = cosine_similarity(np.array(readPercs).reshape(1,-1), 
                     np.array(probVals).reshape(1,-1))[0,0]
         
@@ -239,7 +253,7 @@ class multiwayEval:
         print("Comparing -------------")
         print(f"Slope for observed: {slope1.mean()}")
         print(f"Slope for expected: {slope2.mean()}")
-        print(f"Correlation: {correlation}")
+        print(f"Wasserstein distance: {wDist}")
         print(f"Cosine similarity: {similarity}")
 
         # Adjust layout and show the subplots
@@ -249,16 +263,16 @@ class multiwayEval:
         plt.close()
         return None
 
-    def plotSimilarityHist(self,corrList,cosList,card):
-        """Given distribution for a cardinality, plot the correlation
+    def plotSimilarityHist(self,wdistList,cosList,card):
+        """Given distribution for a cardinality, plot the wass dist
         and cosine similarity values so that we can settle on a heuristic"""
         # Create a 2x2 grid of subplots
         fig, axs = plt.subplots(1, 2, figsize=(8, 4))
 
-        # Plot 1: Pearson correlation histogram
-        axs[0].hist(corrList, color='blue', alpha=0.7, width=0.3, bins=201)
+        # Plot 1: Wasserstein distance histogram
+        axs[0].hist(wdistList, color='blue', alpha=0.7, width=0.3, bins=201)
         axs[0].set_xlim(-1, 1.01)
-        axs[0].set_title(f"Mean pearson correlation for card={card}")
+        axs[0].set_title(f"Mean wasserstein distance for card={card}")
 
         # Plot 2: Cosine similarity histogram
         axs[1].hist(cosList, color='green', alpha=0.7, width=0.3, bins=101)
@@ -278,7 +292,7 @@ class multiwayEval:
         sortedSumm = summaryDF.sort_values(by='mean')
         x = [i+1 for i in range(summaryDF.shape[0])] # Use the index as x-axis
         y = sortedSumm['mean']
-        error = sortedSumm['sem']
+        error = sortedSumm['std']
 
         plt.scatter(x, y, label=f'mean {metric}', marker='o')
         plt.errorbar(x, y, yerr=error, linestyle='None', color='grey', capsize=3)
