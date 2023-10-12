@@ -4,6 +4,8 @@ from itertools import combinations
 import multiprocessing
 import os
 
+from utils import flatten
+
 def increaseIncDF_binSize(df,binSize):
     """This collapses consective bins in an incidence DF
     to reduce dimensions. This also means that some multiway
@@ -80,7 +82,7 @@ class IncDFCreator:
         #condition1 = (0 < vec)
         condition2 = (vec < self.prim_cutoff)
         possNeighbors = [row_ix + self.offDiagLim + index for index in np.where(condition2)[0]]
-        possNeighbors.insert(0, 0)
+        possNeighbors.insert(0, row_ix)
         if possNeighbors:
             for ix in range(2, len(possNeighbors)):
                 for comb in combinations(possNeighbors, ix):
@@ -137,12 +139,12 @@ class RealHiC:
         binary_dist_mat = np.where(chain_mat <= 500, 1, 0)
         return binary_dist_mat
 
-    def distFilesToRealHiC(self, num_files):
+    def distFilesToRealHiC(self):
         """Binarize a whole bunch of distance matrices
         specified by numFiles"""
         real_hic = None
         counter = 0
-        for i in range(i, num_files):
+        for i in range(i, self.num_files):
             file_path = f'{self.chain_dir}chain_dist_{i}.txt'
             if os.path.isfile(file_path):
                 counter += 1

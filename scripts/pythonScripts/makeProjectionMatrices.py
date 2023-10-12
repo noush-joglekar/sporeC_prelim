@@ -19,7 +19,7 @@ def main():
     outDir = f'{dataDir}{args.outDir}/'
 
     ## Read in distance file
-    exMat = np.loadtxt(f'{dataDir}chains_500_10000_1500_1681171613/chain_dist_{fileNum}.txt')
+    exMat = np.loadtxt(f'{dataDir}{args.inputDir}/chain_dist_{fileNum}.txt')
     print("Read in distance file, generating incidence matrix")
 
     prim_cutoff = args.prim_cutoff
@@ -64,6 +64,7 @@ def parse_args():
         2. the incDF but binned to have 5 nodes combined into 1,
         3. A projection matrix""")
 
+    parser.add_argument("inputDir",type=str, help="Input directory relative to data dir")
     parser.add_argument("outDir",type=str, help="Output directory relative to data dir")
     parser.add_argument("file_num", type=int, help="Input file ID")
     parser.add_argument("prim_cutoff", type=int, help="Distance cutoff value to make sub-matrices")
