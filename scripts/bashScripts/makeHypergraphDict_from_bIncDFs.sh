@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --job-name=HPDict
-#SBATCH --time=24:00:00   # HH/MM/SS
+#SBATCH --time=48:00:00   # HH/MM/SS
 #SBATCH --mem=4G   # memory requested, units available: K,M,G,T
 #SBATCH --mail-user=ajoglekar@nygenome.org
 #SBATCH --mail-type=ALL
