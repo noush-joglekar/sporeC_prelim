@@ -126,36 +126,49 @@ class multiwayEval:
     def statsForAllReads(self,probHash):
         """Wrapper for all reads"""
         for card in range(max(self.keyCard),3,-1):
-            wDistStats, cosStats = self.statsForAllCardSubsets(card,probHash)
-            summaryCos = cosStats.filter(like="Sub").agg((np.mean,np.std),axis = 1)
-            summaryWDist = wDistStats.filter(like="Sub").agg((np.mean,np.std),axis = 1)
-            cosCutoff = self.getCutoff(summaryCos,self.qt)
-            cStatus = [1 if x else 0 for x in (summaryCos['mean'] <= cosCutoff)]
-            cosStats['Status'] = cStatus
-            wdistCutoff = self.getCutoff(summaryWDist,100 - self.qt)
-            wStatus = [1 if x else 0 for x in (summaryWDist['mean'] >= wdistCutoff)]
-            wDistStats['Status'] = wStatus
-            if self.toPlotScatter is True:
-                self.plotScatterWithErrorBars(summaryCos,"CosineSim",card)
-                self.plotScatterWithErrorBars(summaryWDist,"WassDist",card)
-            self.plotSimilarityHist(summaryWDist['mean'],summaryCos['mean'],card)
-            print("Writing output")
-            wDistStats.to_csv(f'{self.outDir}/wDist_card{card}.csv',sep = "\t",index=False)
-            cosStats.to_csv(f'{self.outDir}/cosineSim_card{card}.csv',sep = "\t",index=False)
+            allStats = self.statsForAllCardSubsets(card,probHash)
+            self.processConcatDFs(allStats[0],"wDist",False,card)
+            self.processConcatDFs(allStats[1],"cosineSim",True,card)
+            self.processConcatDFs(allStats[2],"eDist",False,card)
+            self.processConcatDFs(allStats[3],"empDist",True,card)
         for card in [3]:
-            wDistStats, cosStats = self.statsForAllCardSubsets(card,probHash)
-            cosCutoff = pd.Series(cosStats['3Sub2']).describe()[f'{self.qt}%']
-            status = [1 if x else 0 for x in (summaryCos['mean'] <= cosCutoff)]
-            cosStats['Status'] = status
-            wdistCutoff = pd.Series(wDistStats['3Sub2']).describe()[f'{self.qt}%']
-            wStatus = [1 if x else 0 for x in (summaryWDist['mean'] <= wdistCutoff)]
-            wDistStats['Status'] = wStatus
-            self.plotSimilarityHist(wDistStats['3Sub2'],cosStats['3Sub2'],card)
-            print("Writing output")
-            wDistStats.to_csv(f'{self.outDir}/wDist_card{card}.csv',sep = "\t",index=False)
-            cosStats.to_csv(f'{self.outDir}/cosineSim_card{card}.csv',sep = "\t",index=False)
+            allStats = self.statsForAllCardSubsets(card,probHash)
+            self.processConcatDFs(allStats[0],"wDist",False,card)
+            self.processConcatDFs(allStats[1],"cosineSim",True,card)
+            self.processConcatDFs(allStats[2],"eDist",False,card)
+            self.processConcatDFs(allStats[3],"empDist",True,card)            
         return None
 
+    def processConcatDFs(self,metricDF,metricName,simiBool,card):
+        """summarize and write output for each metric"""
+        if simiBool is True:
+            qtCutoff = self.qt
+            operator = "leq"
+        else:
+            qtCutoff = 100 - self.qt
+            operator = "geq"
+        if card == 3:
+            metricCutoff = pd.Series(metricDF['3Sub2']).describe()[f'{qtCutoff}%']
+            self.plotSimilarityHist(metricDF['3Sub2'],metricName,card)
+            if operator == "leq":
+                mStatus = [1 if x else 0 for x in (metricDF['3Sub2'] <= metricCutoff)]
+            else:
+                mStatus = [1 if x else 0 for x in (metricDF['3Sub2'] >= metricCutoff)]
+        else:
+            summaryMetric = metricDF.filter(like="Sub").agg((np.mean,np.std),axis = 1)        
+            metricCutoff = self.getCutoff(summaryMetric,qtCutoff)
+            self.plotSimilarityHist(summaryMetric['mean'],metricName,card)
+            if operator == "leq":
+                mStatus = [1 if x else 0 for x in (summaryMetric['mean'] <= metricCutoff)]
+            else:
+                mStatus = [1 if x else 0 for x in (summaryMetric['mean'] >= metricCutoff)]
+            if self.toPlotScatter is True:
+                self.plotScatterWithErrorBars(summaryMetric,metricName,card)
+        metricDF['Status'] = mStatus
+        print(f"Writing output for {metricName}")
+        metricDF.to_csv(f'{self.outDir}/{metricName}_card{card}.csv',sep = "\t",index=False)
+        return None
+    
     def getCutoff(self,summaryDF,quartile):
         q = f'{quartile}%'
         cutoff = pd.Series(summaryDF['mean']).describe()[q]
@@ -178,8 +191,8 @@ class multiwayEval:
             stats = self.getStatsPerCard(card,n,probHash,revised_ixes)
             C1.append(stats[0])
             C2.append(stats[1])
-            C3.append(stats[0])
-            C4.append(stats[1])
+            C3.append(stats[2])
+            C4.append(stats[3])
         cN = [str(card)+"Sub"+str(i) for i in range(2,card)]
         df1 = pd.DataFrame(C1).T
         df2 = pd.DataFrame(C2).T
@@ -220,6 +233,7 @@ class multiwayEval:
         readPercs = self.getProbabilitiesByDist(readDict)
         probVals = [hash[k] for k in readDict.keys()]
         normProbs = [p / sum(probVals) for p in probVals]
+        probVals = normProbs  ## Normalizing mostly for the empirical calculation
         if self.toPlotInd is True:
             if len(readPercs) > 2 and len(probVals) > 2:
                 self.makeSanityCheckPlotsPerRead(readDict,readPercs,probVals,card,n,ix)
@@ -271,7 +285,7 @@ class multiwayEval:
         axs[1, 0].set_title(f"Barplot for readPercs Card{card}sub{n}")
         # Plot 4: Barplot for probVals
         sns.barplot(x=list(readDict.keys()), y=probVals, ax=axs[1, 1])
-        axs[1, 1].set_title(f"Barplot for probVals Card{card}sub{n}")
+        axs[1, 1].set_title(f"Barplot for normalized prior probs Card{card}sub{n}")
 
         #correlation = np.corrcoef(readPercs, probVals)[0, 1]
         wDist = wasserstein_distance(readPercs, probVals)
@@ -296,26 +310,13 @@ class multiwayEval:
         plt.close()
         return None
 
-    def plotSimilarityHist(self,wdistList,cosList,card):
+    def plotSimilarityHist(self,metricDistr,metricName,card):
         """Given distribution for a cardinality, plot the wass dist
         and cosine similarity values so that we can settle on a heuristic"""
-        # Create a 2x2 grid of subplots
-        fig, axs = plt.subplots(1, 2, figsize=(8, 4))
-
-        # Plot 1: Wasserstein distance histogram
-        axs[0].hist(wdistList, color='blue', alpha=0.7, width=0.3, bins=201)
-        axs[0].set_xlim(-1, 1.01)
-        axs[0].set_title(f"Mean wasserstein distance for card={card}")
-
-        # Plot 2: Cosine similarity histogram
-        axs[1].hist(cosList, color='green', alpha=0.7, width=0.3, bins=101)
-        axs[1].set_xlim(0, 1.01)
-        axs[1].set_title(f"Mean cosine similarity for card={card}")
-        # Adjust layout
-        plt.tight_layout()
-        plt.savefig(f'{self.plotDir}/Histogram_MeanForCard{card}.png',
-                    bbox_inches = 'tight',facecolor = "white")
-        #plt.show()
+        plt.figure(figsize=(4,4))
+        plt.hist(metricDistr,color='blue', alpha=0.7, width=0.3,bins = 201)
+        plt.xlim(-1,1.01)
+        plt.title(f"Mean {metricName} distance for card={card}")
         plt.close()
         return None
 
@@ -331,7 +332,7 @@ class multiwayEval:
         plt.errorbar(x, y, yerr=error, linestyle='None', color='grey', capsize=3)
         plt.xlabel('ReadID')
         plt.ylabel(f'mean {metric}')
-        plt.ylim(-1,1)
+        plt.ylim(0,2)
         plt.title(f'Distribution for card={card}')
         plt.legend()
         plt.savefig(f'{self.plotDir}/ScatterPlot_{metric}_Card{card}_max{self.toChoose}reads.png',
