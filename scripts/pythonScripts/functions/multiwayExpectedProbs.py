@@ -6,6 +6,7 @@ from itertools import combinations
 from collections import defaultdict
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy.stats import wasserstein_distance
+from scipy.stats import energy_distance
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -93,6 +94,7 @@ class multiwayEval:
         obtain the expected probability distribution from the data"""
         totalReadsForCard = sum(mainDict.values())
         normalized_values = [value / totalReadsForCard for value in mainDict.values()]
+        ## return total reads as well
         return(normalized_values)
     
     def plotReadFreqsPerCard(self,mainDict,normalized_values,card,n):
@@ -170,18 +172,28 @@ class multiwayEval:
         revised_ixes = random.sample(ixList,cardToChoose)
         C1 = []
         C2 = []
+        C3 = []
+        C4 = []
         for n in range(2,card):
             stats = self.getStatsPerCard(card,n,probHash,revised_ixes)
             C1.append(stats[0])
             C2.append(stats[1])
+            C3.append(stats[0])
+            C4.append(stats[1])
         cN = [str(card)+"Sub"+str(i) for i in range(2,card)]
         df1 = pd.DataFrame(C1).T
         df2 = pd.DataFrame(C2).T
+        df3 = pd.DataFrame(C3).T
+        df4 = pd.DataFrame(C4).T
         df1.columns = cN
         df1['Edge_ix'] = revised_ixes
         df2.columns = cN
         df2['Edge_ix'] = revised_ixes
-        return(df1,df2)
+        df3.columns = cN
+        df3['Edge_ix'] = revised_ixes
+        df4.columns = cN
+        df4['Edge_ix'] = revised_ixes
+        return(df1,df2,df3,df4)
 
     def getStatsPerCard(self,card,n,probHash,revised_ixes):
         """Per cardinality, get a subset of reads (for computational
@@ -189,13 +201,17 @@ class multiwayEval:
         to the expected value, and output a list"""
         wdistList = []
         cosList = []
+        edistList = []
+        empDistList = []
         expHash = f'{card}sub{n}'
         for ix in revised_ixes:
             #print(ix)
-            wDist, cos = self.getReadExpectednessStats(card,ix,n,probHash[expHash])
+            wDist, cos, eDist, empDist = self.getReadExpectednessStats(card,ix,n,probHash[expHash])
             wdistList.append(wDist)
             cosList.append(cos)
-        return(wdistList, cosList)
+            edistList.append(eDist)
+            empDistList.append(empDist)
+        return(wdistList, cosList, edistList, empDistList)
     
     def getReadExpectednessStats(self,card,ix,n,hash):
         """Per read, get the observed distribution of n-way contacts
@@ -203,32 +219,45 @@ class multiwayEval:
         readDict = self.makeNWayDict(ix,n)
         readPercs = self.getProbabilitiesByDist(readDict)
         probVals = [hash[k] for k in readDict.keys()]
+        normProbs = [p / sum(probVals) for p in probVals]
         if self.toPlotInd is True:
             if len(readPercs) > 2 and len(probVals) > 2:
                 self.makeSanityCheckPlotsPerRead(readDict,readPercs,probVals,card,n,ix)
         wDist = wasserstein_distance(readPercs, probVals)
         similarity = cosine_similarity(np.array(readPercs).reshape(1,-1), 
                                     np.array(probVals).reshape(1,-1))[0,0]
-        return(wDist, similarity)
+        eDist = energy_distance(readPercs, probVals)
+        empDist = self.calcEmpDist(readPercs, probVals)
+        return(wDist, similarity, eDist, empDist)
+    
+    def calcEmpDist(readPercs, probVals):
+        """Trying a different metric for distance. 
+        We will figure out the cutoff later"""
+        obs = np.log(readPercs)
+        exp = np.log(probVals)
+        obsOverExp = obs/exp
+        meanOE = obsOverExp.mean()
+        return(meanOE)
 
     def makeSanityCheckPlotsPerRead(self,readDict, readPercs, probVals, card, n, ix):
         """For specific reads, plot the observed versus expected distributions
         of two-way interactions along with a fitted spline. Additionally outputs
         the slope (useful only if line) and wDist values"""
         Distances = list(readDict.keys())
-        Freqs = readPercs
         print(card,"sub",n)
         print(ix)
-        print(Freqs)
+        print(readPercs)
         print(probVals)
         
         # Create a 2x2 grid of subplots
         fig, axs = plt.subplots(2, 2, figsize=(6, 6))
         # Plot 1: Observed w/ spline
-        lowess1 = sns.regplot(x=Distances, y=Freqs, lowess=True, ci=None, color='red', ax=axs[0, 0])
+        lowess1 = sns.regplot(x=Distances, y=readPercs, 
+                              lowess=True, ci=None, color='red', ax=axs[0, 0])
         axs[0, 0].set_title(f"Observed w/ spline Card{card}sub{n}")
         # Plot 2: Expected w/ spline
-        lowess2 = sns.regplot(x=Distances, y=probVals, lowess=True, ci=None, color='grey', ax=axs[0, 1])
+        lowess2 = sns.regplot(x=Distances, y=probVals, 
+                              lowess=True, ci=None, color='grey', ax=axs[0, 1])
         axs[0, 1].set_title(f"Expected w/ spline Card{card}sub{n}")
 
         # Calculate smoothed values and slopes
@@ -248,12 +277,16 @@ class multiwayEval:
         wDist = wasserstein_distance(readPercs, probVals)
         similarity = cosine_similarity(np.array(readPercs).reshape(1,-1), 
                     np.array(probVals).reshape(1,-1))[0,0]
+        eDist = energy_distance(readPercs, probVals)
+        empDist = self.calcEmpDist(readPercs, probVals)
         
         # Print the slopes
         print("Comparing -------------")
         print(f"Slope for observed: {slope1.mean()}")
         print(f"Slope for expected: {slope2.mean()}")
         print(f"Wasserstein distance: {wDist}")
+        print(f"Energy distance: {eDist}")
+        print(f"Empirical distance: {empDist}")
         print(f"Cosine similarity: {similarity}")
 
         # Adjust layout and show the subplots
