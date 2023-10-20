@@ -230,7 +230,7 @@ class multiwayEval:
         empDist = self.calcEmpDist(readPercs, probVals)
         return(wDist, similarity, eDist, empDist)
     
-    def calcEmpDist(readPercs, probVals):
+    def calcEmpDist(self,readPercs, probVals):
         """Trying a different metric for distance. 
         We will figure out the cutoff later"""
         obs = np.log(readPercs)
@@ -246,8 +246,8 @@ class multiwayEval:
         Distances = list(readDict.keys())
         print(card,"sub",n)
         print(ix)
-        print(readPercs)
-        print(probVals)
+        #print(readPercs)
+        #print(probVals)
         
         # Create a 2x2 grid of subplots
         fig, axs = plt.subplots(2, 2, figsize=(6, 6))
