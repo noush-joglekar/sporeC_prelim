@@ -47,11 +47,11 @@ def main():
     file_path = f'{outDir}projMat_{offDiagLim}_{prim_cutoff}_{sec_cutoff}_{fileNum}.txt'
     np.savetxt(file_path, hic_mat, delimiter='\t', fmt='%d')
 
-    file_path = f'{outDir}incDF_{offDiagLim}_{prim_cutoff}_{sec_cutoff}_{fileNum}.pkl'
-    exChain.to_pickle(file_path)
+    file_path = f'{outDir}incDF_{offDiagLim}_{prim_cutoff}_{sec_cutoff}.h5'
+    exChain.to_hdf(file_path, key=f'df{fileNum}', mode='a')
 
-    file_path = f'{outDir}binConcatInc_{offDiagLim}_{prim_cutoff}_{sec_cutoff}_{fileNum}.pkl'
-    exChain_by5.to_pickle(file_path)
+    file_path = f'{outDir}binConcatInc_{offDiagLim}_{prim_cutoff}_{sec_cutoff}.h5'
+    exChain_by5.to_hdf(file_path, key=f'df{fileNum}', mode='a')
 
     file_path = f'{outDir}summary.txt'
     with open(file_path, 'a') as file:
