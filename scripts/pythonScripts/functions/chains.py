@@ -37,6 +37,7 @@ def dictToDF(hpDict):
     for hypergraph construction. We can implement pruning based on
     heuristics later"""
     indices = list(set(flatten([key.split('_') for key in hpDict.keys()])))
+    indices.sort()
     columns = []
     colnames = []
     counter = 0

@@ -12,11 +12,12 @@ import seaborn as sns
 
 class multiwayEval:
 
-    def __init__(self, keyCard, hpEdges, hpKeys_split, seed, 
+    def __init__(self, keyCard, hpEdges, hpKeys, hpKeys_split, seed, 
                  toChoose,toPlotRef, toPlotInd, toPlotScatter,
                  quartile, plotDir,outDir):
         self.keyCard = keyCard
         self.hpEdges = hpEdges
+        self.hpKeys = hpKeys
         self.hpKeys_split = hpKeys_split
         self.seed = seed
         self.toPlotRef = toPlotRef
@@ -26,6 +27,14 @@ class multiwayEval:
         self.qt = quartile
         self.plotDir = plotDir
         self.outDir = outDir
+
+    def getReadSupportStatsPerCard(self, ixList, card):
+        """Get disribution of read support per card so as to impose cutoffs
+        in the end as to the trustworthiness of reads"""
+        readSupps = [self.hpEdges[self.hpKeys[ix]] for ix in ixList]
+        rsStats = pd.Series(readSupps).describe()
+        rsStats.to_pickle(f'{self.outDir}readStats_card{card}.pkl')
+        return
 
     def makeAllReferenceHashDicts(self):
         """For all available cards, create look up table of probability of
@@ -37,6 +46,7 @@ class multiwayEval:
             print("Calculating for card=",card)
             ixList = [index for index,element in enumerate(self.keyCard) if element == card]
             print("There are ",len(ixList),"reads")
+            self.getReadSupportStatsPerCard(ixList,card)
             for n in range(2,card):
                 print(f"Creating a probability hash for {n}-way subsets")
                 hashID = f'{card}sub{n}'
@@ -50,7 +60,7 @@ class multiwayEval:
         mainDict = defaultdict(int)
 
         for ix in ixList:
-            nWayDict = self.makeNWayDict(ix,n)
+            readSupport, nWayDict = self.makeNWayDict(ix,n)
             for key in nWayDict.keys():
                 mainDict[key] += nWayDict[key]
 
@@ -65,6 +75,7 @@ class multiwayEval:
         """For a high cardinality read, make a dictionary
         that outputs the frequency and mean distance for subsets
         of cardinality n"""
+        readSupport = self.hpEdges[self.hpKeys[ix]]
         splitKey = self.hpKeys_split[ix]
         combs = list(combinations(splitKey,n))
         subsetDict = defaultdict(int)
@@ -73,14 +84,15 @@ class multiwayEval:
             subsetEdgeReads = self.hpEdges[subsetEdge]
             meanDist = self.getNWayMeanDistPerSubset(comb)
             subsetDict[meanDist] = subsetEdgeReads
-        return(subsetDict)
+        return(readSupport, subsetDict)
     
     def getNWayMeanDistPerSubset(self,comb):
         """Get the mean pairwise distance given a
         high cardinality read"""
         twoWays = list(combinations(comb,2))
         twoWayDist = [self.getPairwiseDist(c) for c in twoWays]
-        meanDist = round(statistics.mean(twoWayDist))
+        # meanDist = round(statistics.mean(twoWayDist))
+        meanDist = round(statistics.geometric_mean(twoWayDist)) ## geometric mean
         return(meanDist)
     
     def getPairwiseDist(self,combination):
@@ -105,7 +117,7 @@ class multiwayEval:
         # Step 1: Plot a barplot with dictionary keys on the x-axis and values on the y-axis
         sns.barplot(x=list(mainDict.keys()), y=list(mainDict.values()),color = "grey")
         plt.title(f"Read frequency of {n}-way subsets for Card={card}")
-        plt.xlabel(f"Mean distance between {n}-way interactions")
+        plt.xlabel(f"Mean (Geom) distance between {n}-way interactions")
         plt.ylabel("Frequency")
         plt.xticks(rotation=90,fontsize=5)
         plt.savefig(f'{self.plotDir}DistStratProbs_Card{card}sub{n}.png',bbox_inches = 'tight',facecolor = "white")
@@ -114,7 +126,7 @@ class multiwayEval:
         # Step 2: Plot the same barplot with the ratio of each value to the total
         sns.barplot(x=list(mainDict.keys()), y=normalized_values,color = "grey")
         plt.title(f"Probability of occurrence {n}-way distance for Card={card}")
-        plt.xlabel(f"Mean distance between {n}-way interactions")
+        plt.xlabel(f"Mean (Geom) distance between {n}-way interactions")
         plt.ylabel("Probabilities")
         plt.xlim(0,19)
         plt.xticks(rotation=90)
@@ -193,6 +205,8 @@ class multiwayEval:
             C2.append(stats[1])
             C3.append(stats[2])
             C4.append(stats[3])
+            if n == 2:
+                C5 = stats[4]
         cN = [str(card)+"Sub"+str(i) for i in range(2,card)]
         df1 = pd.DataFrame(C1).T
         df2 = pd.DataFrame(C2).T
@@ -200,12 +214,16 @@ class multiwayEval:
         df4 = pd.DataFrame(C4).T
         df1.columns = cN
         df1['Edge_ix'] = revised_ixes
+        df1['ReadSupport'] = C5
         df2.columns = cN
         df2['Edge_ix'] = revised_ixes
+        df2['ReadSupport'] = C5
         df3.columns = cN
         df3['Edge_ix'] = revised_ixes
+        df3['ReadSupport'] = C5
         df4.columns = cN
         df4['Edge_ix'] = revised_ixes
+        df4['ReadSupport'] = C5
         return(df1,df2,df3,df4)
 
     def getStatsPerCard(self,card,n,probHash,revised_ixes):
@@ -216,21 +234,24 @@ class multiwayEval:
         cosList = []
         edistList = []
         empDistList = []
+        readSuppList = []
         expHash = f'{card}sub{n}'
         for ix in revised_ixes:
             #print(ix)
-            wDist, cos, eDist, empDist = self.getReadExpectednessStats(card,ix,n,probHash[expHash])
+            wDist, cos, eDist, empDist, readSupport = self.getReadExpectednessStats(
+                card,ix,n,probHash[expHash])
             wdistList.append(wDist)
             cosList.append(cos)
             edistList.append(eDist)
             empDistList.append(empDist)
-        return(wdistList, cosList, edistList, empDistList)
+            readSuppList.append(readSupport)
+        return(wdistList, cosList, edistList, empDistList, readSuppList)
     
     def getReadExpectednessStats(self,card,ix,n,hash):
         """Per read, get the observed distribution of n-way contacts
         and calculate similarity to the expected distribution"""
-        readDict = self.makeNWayDict(ix,n)
-        readPercs = self.getProbabilitiesByDist(readDict)
+        readSupport, readDict = self.makeNWayDict(ix,n)
+        readPercs= self.getProbabilitiesByDist(readDict)
         probVals = [hash[k] for k in readDict.keys()]
         normProbs = [p / sum(probVals) for p in probVals]
         probVals = normProbs  ## Normalizing mostly for the empirical calculation
@@ -242,7 +263,7 @@ class multiwayEval:
                                     np.array(probVals).reshape(1,-1))[0,0]
         eDist = energy_distance(readPercs, probVals)
         empDist = self.calcEmpDist(readPercs, probVals)
-        return(wDist, similarity, eDist, empDist)
+        return(wDist, similarity, eDist, empDist, readSupport)
     
     def calcEmpDist(self,readPercs, probVals):
         """Trying a different metric for distance. 
