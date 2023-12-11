@@ -17,14 +17,12 @@ def process_chunk(dataDir, inputDir, outDir, offDiagDist, chunk, chunk_size):
     end_file = chunk * chunk_size
 
     for ix in range(start_file, end_file + 1):
-        filePath = f'{dataDir}/{inputDir}/binConcatInc_3_600_750_{i}.pkl'
+        filePath = f'{dataDir}/{inputDir}/binConcatInc_3_600_750_{ix}.pkl'
         if os.path.isfile(filePath):
             bIncDF = pd.read_pickle(filePath)
             result_dict = dfToDict(bIncDF, result_dict)
             nE = len(result_dict)
             numEdges.append(nE)
-        except KeyError:
-            bincDF = None
 
     # Write temporary output for the current chunk
     temp_output_file = f'{dataDir}/{outDir}hyperEdges_{offDiagDist}_600_750_chunk{chunk}_chains.pkl'
@@ -34,7 +32,7 @@ def process_chunk(dataDir, inputDir, outDir, offDiagDist, chunk, chunk_size):
     temp_num_edges_file = f'{dataDir}{outDir}numEdges_{offDiagDist}_600_750_chunk{chunk}_chains.txt'
     np.savetxt(temp_num_edges_file, numEdges, delimiter='\t', fmt='%d')
 
-def constructFullDict_h5_parallel(dataDir, inputDir, outDir, offDiagDist, numFiles, chunk_size, num_cores):
+def constructFullDict_pkl_parallel(dataDir, inputDir, outDir, offDiagDist, numFiles, chunk_size, num_cores):
     """Process data in chunks using parallel processing."""
     num_chunks = numFiles // chunk_size
 
@@ -79,4 +77,4 @@ chunk_size = int(sys.argv[5])
 
 print("About to read in",numFiles,"files in chunks of",chunk_size)
 
-constructFullDict_h5_parallel(dataDir, inputDir, outDir, offDiagDist, numFiles, chunk_size,num_cores=8)
+constructFullDict_pkl_parallel(dataDir, inputDir, outDir, offDiagDist, numFiles, chunk_size,num_cores=8)

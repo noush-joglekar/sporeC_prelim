@@ -37,13 +37,14 @@ def main():
         hpEdges = pickle.load(f)
 
     print("Processing all the hyperedges from pickle file")
+    hpKeys = [k for k in hpEdges.keys()]
     hpKeys_split = [k.split("_") for k in hpEdges.keys()]
     keyCard = [len(item) for item in hpKeys_split]
 
-    evalInstance = multiwayEval(keyCard, hpEdges, hpKeys_split, seed,
+    evalInstance = multiwayEval(keyCard, hpEdges, hpKeys, hpKeys_split, seed,
                                 toChoose, toPlotRef, toPlotInd, toPlotScatter,
                                 quartile, plotDir,outDir)
-    
+
     if os.path.exists(probHashOutName):
         print("Expected probabilities file already exists...moving on")
         with open(probHashOutName,'r') as file:
@@ -56,7 +57,7 @@ def main():
         with open(probHashOutName,'w') as file:
             json.dump(probHash,file)
         print("File created...moving on")
-    
+
     warnings.filterwarnings('ignore')
     evalInstance.statsForAllReads(probHash)
 
