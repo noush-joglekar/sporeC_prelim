@@ -1,0 +1,48 @@
+import snakemake.utils
+import itertools
+
+snakemake.utils.min_version("7.0.0")
+
+sampleDirs = ["DIR1/","DIR2/"]
+
+### RULES ###
+
+rule all:
+    input:
+        expand("{sd}",sd=sampleDirs)
+
+
+## Rule 1 ----------
+### Construct a set of reads per chain
+
+rule makeProjectionMatrices:
+    """Create incidence df, binned incidence df, and projection matrices
+    for chains in a given directory. If verifying, then perform for 
+    a subset of chains as specified. 
+    Input: Directory of chains
+    Output: Directory of 2 pkl files and 1 matrix per chain
+    """
+    input:
+    output:
+    shell: 
+    """
+    /gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/v0.analysis/scripts/bashScripts/makeProjMat_v3_sample2.sh
+    """
+
+
+## Rule 2 ----------
+### Compile a hyperedge dictionary with read/ edge frequency
+
+## Rule 3 ---------- TBD
+### Prune the hypergraph to remove pre-existing read subsets
+
+## Rule 4 -----------
+### Get a background distribution of read and subset cards
+
+## Rule 5 -----------
+### Get expectedness stats and read support per read
+
+### Rule 6 -----------
+### Identify interesting reads based on cutoff. Construct a new dict
+
+## Done.
