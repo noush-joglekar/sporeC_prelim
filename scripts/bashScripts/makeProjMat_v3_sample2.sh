@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --partition=pe2   # cluster-specific
-#SBATCH --array=0-7000%100
+#SBATCH --array=7001-10000%100
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
@@ -24,7 +24,7 @@ echo "Processing "$SLURM_ARRAY_TASK_ID
 
 ## IMPORTANT: Directories hard coded in python script
 
-time python /gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/v0.analysis/scripts/pythonScripts/makeProjectionMatrices.py \
+time python /gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/v0.analysis/scripts/pythonScripts/makeProjectionMatrices_pkl.py \
 chains_500_10000_1500_1696950861/ chains_7k_500_projectionMtxOutput_sample2/ $SLURM_ARRAY_TASK_ID 600 750 4 --offDiagLim 3
 
 echo "Job finished or was terminated, please check logs"
