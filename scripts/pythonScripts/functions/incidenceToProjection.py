@@ -32,9 +32,13 @@ def makeHiC_fromInc(incDF):
 def makeNorm_HiC_fromInc(incDF,weightList):
     ## 2D HiC matrix with counts normalized by weights
     nrow = incDF.shape[0]
-    ncol = incDF.shape[1]
     binIDs = list(incDF.index)
-    df = pd.DataFrame(np.zeros(shape = (nrow,nrow)), index=binIDs, columns=binIDs)
+    if isinstance(binIDs[0],str) and ":" in binIDs[0]:
+        sorted_binIDs = sorted(binIDs, key=sort_key)
+    else:
+        sorted_binIDs = binIDs.sort()
+    df = pd.DataFrame(np.zeros(shape = (nrow,nrow)), index=sorted_binIDs, 
+                      columns=sorted_binIDs)
     for read in incDF.columns:
         arr = incDF[read][incDF[read] == 1].index
         for a in arr:
