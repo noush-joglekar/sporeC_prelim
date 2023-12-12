@@ -29,6 +29,20 @@ def makeHiC_fromInc(incDF):
             df.loc[c[1]][c[0]] += support
     return(df)
 
+def multiresolutionProjMat(df, ratios, report):
+    """Given an incidence DF and information about how many (ratio)
+    2-way interactions of a multiway interactions are present in the data,
+    calculate projection matrices at each resolution"""
+    projMat_dict = {}
+    for cutoff in [0.5,0.75,0.9,1]:
+        print(f"Making projection matrix for 2-way cutoff = {cutoff}")
+        subset = [index for index, value in enumerate(ratios) if value >= cutoff]
+        report.append(len(subset))
+        subset_df = df.iloc[:,subset]
+        hic_subset = makeHiC_fromInc(subset_df)
+        projMat_dict[cutoff] = hic_subset
+    return [projMat_dict,report]
+
 def makeNorm_HiC_fromInc(incDF,weightList):
     ## 2D HiC matrix with counts normalized by weights
     nrow = incDF.shape[0]

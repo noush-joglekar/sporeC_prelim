@@ -1,14 +1,14 @@
 #!/bin/python
 
 import numpy as np
-import pandas as pd
 import argparse
+import pickle
 
 import sys
 sys.path.append('/gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/v0.analysis/scripts/pythonScripts/functions/')
 
-from incidenceToProjection import makeHiC_fromInc
-from v1.chains import IncDFCreator, increaseIncDF_binSize, dfToDict
+from incidenceToProjection import makeHiC_fromInc, multiresolutionProjMat
+from v1_chains import IncDFCreator, increaseIncDF_binSize, dfToDict
 
 def main():
     ## Set up
@@ -27,14 +27,19 @@ def main():
     exChain = oneIter[0]
     ratios = oneIter[1]
 
-    exChain.index = ["Bin"+str(i) for i in range(exChain.shape[0])]
-
+    print("Calculating basic stats")
     numReads = exChain.shape[1]
+    card = exChain.sum()
+    maxCard = card.max(0)
+
+    report = [args.file_num, numReads, maxCard,
+              args.prim_cutoff, args.sec_cutoff, args.offDiagLim]
+
     print("Binning into sets of 5")
     bInc_by5 = increaseIncDF_binSize(exChain,5)
 
-    print("Making projection matrix")
-    hic_mat = makeHiC_fromInc(exChain)
+    print("Making multiresolution projection matrices")
+    pm_dict, report = multiresolutionProjMat(exChain,ratios,report)
 
     print("Converting a binned incDF to dict")
     newCols = [str(bInc_by5.columns[i])+"_"+str(round(ratios[i],2)) 
@@ -42,25 +47,22 @@ def main():
     bInc_by5.columns = newCols
 
     bInc_dict = {}
-    bInc_dict = dfToDict(bInc_by5,bInc_dict)
-
-    card = exChain.sum()
-    maxCard = card.max(0)
-
-    report = [args.file_num, numReads, maxCard,
-              args.prim_cutoff, args.sec_cutoff, args.offDiagLim]
-    report_string = '\t'.join(map(str,report))
+    bInc_dict = dfToDict(bInc_by5,bInc_dict)[0]
 
     print("Writing output")
 
-    file_path = f'{outDir}projMat_{args.offDiagLim}_{args.prim_cutoff}_{args.sec_cutoff}_{fileNum}.txt'
-    np.savetxt(file_path, hic_mat, delimiter='\t', fmt='%d')
+    report_string = '\t'.join(map(str,report))
 
-    file_path = f'{outDir}incDF_{args.offDiagLim}_{args.prim_cutoff}_{args.sec_cutoff}_{fileNum}.pkl'
+    file_path = f'{outDir}projMats_{args.offDiagLim}_{args.prim_cutoff}_{args.sec_cutoff}_{args.file_num}.pkl'
+    with open(file_path,'wb') as projPkl:
+        pickle.dump(pm_dict,projPkl)
+
+    file_path = f'{outDir}incDF_{args.offDiagLim}_{args.prim_cutoff}_{args.sec_cutoff}_{args.file_num}.pkl'
     exChain.to_pickle(file_path)
 
-    file_path = f'{outDir}binConcatInc_{args.offDiagLim}_{args.prim_cutoff}_{args.sec_cutoff}_{fileNum}.pkl'
-    bInc_dict.to_pickle(file_path)
+    file_path = f'{outDir}binConcatInc_{args.offDiagLim}_{args.prim_cutoff}_{args.sec_cutoff}_{args.file_num}.pkl'
+    with open(file_path,'wb') as pklFile:
+        pickle.dump(bInc_dict,pklFile)
 
     file_path = f'{outDir}summary.txt'
     with open(file_path, 'a') as file:
