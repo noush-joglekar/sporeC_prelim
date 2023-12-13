@@ -32,12 +32,18 @@ def dfToDict(df,result_dict):
         result_dict[key] = result_dict.get(key, 0) + 1
     return(result_dict)
 
+def sort_key(item):
+    return int(item.split(':')[1])
+
 def dictToDF(hpDict):
     """Finally, takes in a dict and converts to incidence DF 
     for hypergraph construction. We can implement pruning based on
     heuristics later"""
     indices = list(set(flatten([key.split('_') for key in hpDict.keys()])))
-    indices.sort()
+    if isinstance(indices[0],str) and ":" in indices[0]:
+        sorted_ix = sorted(indices, key=sort_key)
+    else:
+        sorted_ix = indices.sort()
     columns = []
     colnames = []
     counter = 0
@@ -45,7 +51,7 @@ def dictToDF(hpDict):
     for key, value in hpDict.items():
         counter+=1
         col_ix = key.split('_')
-        column = pd.Series([0] * len(indices),index = indices)  # Initialize row with zeros
+        column = pd.Series([0] * len(sorted_ix),index = sorted_ix)  # Initialize row with zeros
         column[col_ix] = 1
         colName = f"Read{counter}:{value}"
         colnames.append(colName)
