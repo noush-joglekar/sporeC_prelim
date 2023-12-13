@@ -49,7 +49,7 @@ def constructFullDict_pkl_parallel(dataDir, inputDir, outDir, offDiagDist, numFi
         temp_output_file = f'{dataDir}{outDir}hyperEdges_{offDiagDist}_600_750_chunk{chunk}_chains.pkl'
         with open(temp_output_file, 'rb') as f:
             result_dict = pickle.load(f)
-            final_result_dict.update(result_dict)
+            final_result_dict.update(result_dict) ### THIS IS PROBLEMATIC. DOES NOT WORK AS EXPECTED
 
         temp_num_edges_file = f'{dataDir}{outDir}numEdges_{offDiagDist}_600_750_chunk{chunk}_chains.txt'
         numEdges = np.loadtxt(temp_num_edges_file, dtype=int)
