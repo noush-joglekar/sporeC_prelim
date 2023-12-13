@@ -38,9 +38,6 @@ def main():
     print("Binning into sets of 5")
     bInc_by5 = increaseIncDF_binSize(exChain,5)
 
-    print("Making multiresolution projection matrices")
-    pm_dict, report = multiresolutionProjMat(exChain,ratios,report)
-
     print("Converting a binned incDF to dict")
     newCols = [str(bInc_by5.columns[i])+"_"+str(round(ratios[i],2)) 
            for i in range(bInc_by5.shape[1])]
@@ -49,20 +46,24 @@ def main():
     bInc_dict = {}
     bInc_dict = dfToDict(bInc_by5,bInc_dict)[0]
 
-    print("Writing output")
-
-    report_string = '\t'.join(map(str,report))
-
-    file_path = f'{outDir}projMats_{args.offDiagLim}_{args.prim_cutoff}_{args.sec_cutoff}_{args.file_num}.pkl'
-    with open(file_path,'wb') as projPkl:
-        pickle.dump(pm_dict,projPkl)
-
+    print("Writing output part 1")
     file_path = f'{outDir}incDF_{args.offDiagLim}_{args.prim_cutoff}_{args.sec_cutoff}_{args.file_num}.pkl'
     exChain.to_pickle(file_path)
 
     file_path = f'{outDir}binConcatInc_{args.offDiagLim}_{args.prim_cutoff}_{args.sec_cutoff}_{args.file_num}.pkl'
     with open(file_path,'wb') as pklFile:
         pickle.dump(bInc_dict,pklFile)
+
+    print("Making multiresolution projection matrices - takes a while")
+    pm_dict, report = multiresolutionProjMat(exChain,ratios,report)
+
+    print("Writing output part 2")
+
+    report_string = '\t'.join(map(str,report))
+
+    file_path = f'{outDir}projMats_{args.offDiagLim}_{args.prim_cutoff}_{args.sec_cutoff}_{args.file_num}.pkl'
+    with open(file_path,'wb') as projPkl:
+        pickle.dump(pm_dict,projPkl)
 
     file_path = f'{outDir}summary.txt'
     with open(file_path, 'a') as file:
