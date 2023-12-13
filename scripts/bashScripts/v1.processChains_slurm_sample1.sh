@@ -7,7 +7,7 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --job-name=10k_s1
 #SBATCH --time=03:00:00   # HH/MM/SS
-#SBATCH --mem=6G   # memory requested, units available: K,M,G,T
+#SBATCH --mem=24G   # memory requested, units available: K,M,G,T
 #SBATCH --mail-user=ajoglekar@nygenome.org
 #SBATCH --mail-type=FAIL
 
