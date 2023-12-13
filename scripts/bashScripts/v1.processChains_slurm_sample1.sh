@@ -25,7 +25,7 @@ echo "Processing "$SLURM_ARRAY_TASK_ID
 ## IMPORTANT: Directories hard coded in python script
 
 time python /gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/v0.analysis/scripts/pythonScripts/v1.processChains.py \
-chains_500_10000_1500_1681171613/ v2.processChainsOutput_10k_500_sample1/ SLURM_ARRAY_TASK_ID 550 750 4 --offDiagLim 3
+chains_500_10000_1500_1681171613/ v2.processChainsOutput_10k_500_sample1/ $SLURM_ARRAY_TASK_ID 550 750 4 --offDiagLim 3
 
 echo "Job finished or was terminated, please check logs"
 exit
