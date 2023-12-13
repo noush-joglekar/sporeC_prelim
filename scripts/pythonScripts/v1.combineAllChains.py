@@ -1,12 +1,11 @@
-import numpy as np
-import pandas as pd
+import argparse
 import os.path
 import pickle
 from multiprocessing import Pool
 
 import sys
 sys.path.append('/gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/v0.analysis/scripts/pythonScripts/functions/')
-from v1_chains import appendSingleBIncDict
+from v1_chains import appendSingleBIncDict, combineChunkedBIncDicts
 
 def process_chunk(dataDir, args,chunk):
     """Process a chunk of files and write temporary output."""
@@ -16,11 +15,11 @@ def process_chunk(dataDir, args,chunk):
     end_file = chunk * args.chunk_size
 
     for ix in range(start_file, end_file + 1):
-        filePath = f'{args.dataDir}/{args.inputDir}/binConcatInc_{args.offDiagDist}_{args.prim_cutoff}_{args.sec_cutoff}_{ix}.pkl'
+        filePath = f'{dataDir}/{args.inputDir}/binConcatInc_{args.offDiagDist}_{args.prim_cutoff}_{args.sec_cutoff}_{ix}.pkl'
         if os.path.isfile(filePath):
             with open(filePath,'rb') as f:
                 bIncDict = pickle.load(f)
-                resultDict = appendSingleBIncDict(bIncDict,resultDict)
+                result_dict = appendSingleBIncDict(bIncDict,result_dict)
 
     # Write temporary output for the current chunk
     temp_output_file = f'{dataDir}/{args.outDir}hyperEdges_{args.offDiagDist}_{args.prim_cutoff}_{args.sec_cutoff}_chunk{chunk}_chains.pkl'
@@ -32,7 +31,7 @@ def constructFullDict_pkl_parallel(dataDir, args):
     num_chunks = args.numFiles // args.chunk_size
 
     # Create a multiprocessing pool with the number of available CPU cores
-    with Pool(num_cores) as pool:
+    with Pool(args.num_cores) as pool:
         pool.starmap(process_chunk, [(dataDir, args, chunk) 
                                      for chunk in range(1, num_chunks + 1)])
 
@@ -43,7 +42,7 @@ def constructFullDict_pkl_parallel(dataDir, args):
         temp_output_file = f'{dataDir}{args.outDir}hyperEdges_{args.offDiagDist}_{args.prim_cutoff}_{args.sec_cutoff}_chunk{chunk}_chains.pkl'
         with open(temp_output_file, 'rb') as f:
             result_dict = pickle.load(f)
-            final_result_dict = appendSingleBIncDict(result_dict,final_result_dict)
+            final_result_dict = combineChunkedBIncDicts(result_dict,final_result_dict)
         # Remove temporary files
         os.remove(temp_output_file)
 
@@ -78,4 +77,4 @@ def main():
     constructFullDict_pkl_parallel(dataDir, args)
 
 if __name__ == "__main__":
-    main()
+    main() 

@@ -38,6 +38,43 @@ def dfToDict(df,result_dict):
         result_dict[key] = tmpList
     return [result_dict]
 
+def appendSingleBIncDict(chainDict,resultDict):
+    """Takes in a binned inc dictionary which contains the
+    read, number of times it occurred in a chain, and the
+    % two-way support for that multiway read. It combines 
+    each element, i.e., 3 elements per key to create a
+    a bigger chunked dict."""
+    for key, value in chainDict.items():
+        tmpList = resultDict.get(key,[])
+        if tmpList:
+            tmpList[0] += value[0]
+            tmpList[1] += 1
+            tmpList[2].append(value[1])  #### Or medians. 
+        else:
+            tmpList = [value[0],1,[value[1]]]
+        resultDict[key] = tmpList
+    return(resultDict)
+
+def combineChunkedBIncDicts(chainDict,resultDict):
+    """Takes in chunked dicts which contain the
+    read, number of chains wherein it occured, and the
+    % two-way support for that multiway read across all chains. 
+    It combines each element, i.e., 3 elements per key to create a
+    a bigger chunked dict. 
+    Also adding cardinality as the fourth element"""
+    for key, value in chainDict.items():
+        tmpList = resultDict.get(key,[])
+        card = len(key.split("_"))
+        if tmpList:
+            tmpList[0] += value[0]
+            tmpList[1] += value[1]
+            tmpList[2].append(value[2]) #### Or medians. 
+            print(tmpList)
+        else:
+            tmpList = [value[0],value[1],[value[2]],card]
+        resultDict[key] = tmpList
+    return(resultDict)
+
 class IncDFCreator:
     """Replacing this function: makeIncDF_fromChainDists"""
     def __init__(self, numProcesses, prim_cutoff, sec_cutoff, offDiagLim):
