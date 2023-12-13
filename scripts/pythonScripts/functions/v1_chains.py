@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from itertools import combinations
 import multiprocessing
+from statistics import median
 
 from utils import flatten
 
@@ -49,9 +50,9 @@ def appendSingleBIncDict(chainDict,resultDict):
         if tmpList:
             tmpList[0] += value[0]
             tmpList[1] += 1
-            tmpList[2].append(value[1])  #### Or medians. 
+            tmpList[2].append(median(value[1]))
         else:
-            tmpList = [value[0],1,[value[1]]]
+            tmpList = [value[0],1,[median(value[1])]]
         resultDict[key] = tmpList
     return(resultDict)
 
@@ -68,10 +69,9 @@ def combineChunkedBIncDicts(chainDict,resultDict):
         if tmpList:
             tmpList[0] += value[0]
             tmpList[1] += value[1]
-            tmpList[2].append(value[2]) #### Or medians. 
-            print(tmpList)
+            tmpList[2].extend(value[2])
         else:
-            tmpList = [value[0],value[1],[value[2]],card]
+            tmpList = [value[0],value[1],value[2],card]
         resultDict[key] = tmpList
     return(resultDict)
 
