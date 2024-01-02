@@ -5,8 +5,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --job-name=chunkPklDict_s2
-#SBATCH --time=24:00:00   # HH/MM/SS
-#SBATCH --mem=13G   # memory requested, units available: K,M,G,T
+#SBATCH --time=01:00:00   # HH/MM/SS
+#SBATCH --mem=12G   # memory requested, units available: K,M,G,T
 #SBATCH --mail-user=ajoglekar@nygenome.org
 #SBATCH --mail-type=ALL
 
@@ -24,7 +24,7 @@ source activate hypergraph_poreC
 time python \
 /gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/v0.analysis/scripts/pythonScripts/v1.combineAllChains.py \
 10000 500 v2.processChainsOutput_10k_500_sample2/ v2.makeCombinedHypergraphDicts/sample2/ \
---prim_cutoff 550 --sec_cutoff 750 --offDiagDist 3 --num_cores 8
+--prim_cutoff 500 --sec_cutoff 750 --offDiagDist 1 --num_cores 8
 
 echo "Job finished or was terminated, please check logs"
 exit

@@ -34,7 +34,7 @@ def multiresolutionProjMat(df, ratios, report):
     2-way interactions of a multiway interactions are present in the data,
     calculate projection matrices at each resolution"""
     projMat_dict = {}
-    for cutoff in [0.5,0.75,0.9,1]:
+    for cutoff in [0.5,1]:
         print(f"Making projection matrix for 2-way cutoff = {cutoff}")
         subset = [index for index, value in enumerate(ratios) if value >= cutoff]
         report.append(len(subset))
