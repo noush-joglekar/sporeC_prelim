@@ -38,10 +38,24 @@ def main():
 
     print("Processing all the hyperedges from pickle file")
     hpKeys = [k for k in hpEdges.keys()]
-    hpKeys_split = [k.split("_") for k in hpEdges.keys()]
-    keyCard = [len(item) for item in hpKeys_split]
+    print("A total of",len(hpKeys),"initial interactions")
+    #keyCard = [len(item) for item in hpKeys_split]
 
-    evalInstance = multiwayEval(keyCard, hpEdges, hpKeys, hpKeys_split, seed,
+    readSupport = [v[0] for v in hpEdges.values()]
+    chainSupport = [v[1] for v in hpEdges.values()]
+    readCards = [v[3] for v in hpEdges.values()]
+
+    atLeastTwoChains = [i for i,x in enumerate(chainSupport) if x >=2]
+    updatedDict = {hpKeys[i]:readSupport[i] for i in atLeastTwoChains}
+
+    hpKeys = [k for k in updatedDict.keys()]
+    hpKeys_split = [k.split("_") for k in updatedDict.keys()]
+    keyCard = [readCards[i] for i in atLeastTwoChains]
+
+    print("Updated the input: retaining",len(hpKeys),
+          "interactions with chain support of at least 2")
+
+    evalInstance = multiwayEval(keyCard, updatedDict, hpKeys, hpKeys_split, seed,
                                 toChoose, toPlotRef, toPlotInd, toPlotScatter,
                                 quartile, plotDir,outDir)
 
