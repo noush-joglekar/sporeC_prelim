@@ -71,7 +71,7 @@ class multiwayEval:
         probabilityDict = {list(mainDict.keys())[ix]:normalized_values[ix] for ix in range(len(normalized_values))}
         return(probabilityDict)
     
-    def makeNWayDict(self,ix,n):
+    def makeNWayDict(self,ix,n): ### Breaks down when filtered
         """For a high cardinality read, make a dictionary
         that outputs the frequency and mean distance for subsets
         of cardinality n"""
@@ -81,7 +81,10 @@ class multiwayEval:
         subsetDict = defaultdict(int)
         for comb in combs:
             subsetEdge = '_'.join(map(str, comb))
-            subsetEdgeReads = self.hpEdges[subsetEdge]
+            try:
+                subsetEdgeReads = self.hpEdges[subsetEdge]
+            except KeyError:
+                subsetEdgeReads = 0
             meanDist = self.getNWayMeanDistPerSubset(comb)
             subsetDict[meanDist] = subsetEdgeReads
         return(readSupport, subsetDict)
@@ -105,9 +108,12 @@ class multiwayEval:
         """Get probabilities of reads occurring by mean dist to
         obtain the expected probability distribution from the data"""
         totalReadsForCard = sum(mainDict.values())
-        normalized_values = [value / totalReadsForCard for value in mainDict.values()]
-        ## return total reads as well
-        return(normalized_values)
+        if totalReadsForCard == 0:
+            return None
+        else:
+            normalized_values = [value / totalReadsForCard for value in mainDict.values()]
+            ## return total reads as well
+            return(normalized_values)
     
     def plotReadFreqsPerCard(self,mainDict,normalized_values,card,n):
         """Takes in a generated dictionary and plots the
@@ -148,7 +154,7 @@ class multiwayEval:
             self.processConcatDFs(allStats[0],"wDist",False,card)
             self.processConcatDFs(allStats[1],"cosineSim",True,card)
             self.processConcatDFs(allStats[2],"eDist",False,card)
-            self.processConcatDFs(allStats[3],"empDist",True,card)            
+            self.processConcatDFs(allStats[3],"empDist",False,card)            
         return None
 
     def processConcatDFs(self,metricDF,metricName,simiBool,card):
@@ -237,14 +243,13 @@ class multiwayEval:
         readSuppList = []
         expHash = f'{card}sub{n}'
         for ix in revised_ixes:
-            #print(ix)
-            wDist, cos, eDist, empDist, readSupport = self.getReadExpectednessStats(
-                card,ix,n,probHash[expHash])
-            wdistList.append(wDist)
-            cosList.append(cos)
-            edistList.append(eDist)
-            empDistList.append(empDist)
-            readSuppList.append(readSupport)
+            stats = self.getReadExpectednessStats(card,ix,n,probHash[expHash])
+            if stats is not None:
+                wdistList.append(stats[0])
+                cosList.append(stats[1])
+                edistList.append(stats[2])
+                empDistList.append(stats[3])
+                readSuppList.append(stats[4])
         return(wdistList, cosList, edistList, empDistList, readSuppList)
     
     def getReadExpectednessStats(self,card,ix,n,hash):
@@ -252,26 +257,32 @@ class multiwayEval:
         and calculate similarity to the expected distribution"""
         readSupport, readDict = self.makeNWayDict(ix,n)
         readPercs= self.getProbabilitiesByDist(readDict)
-        probVals = [hash[k] for k in readDict.keys()]
-        normProbs = [p / sum(probVals) for p in probVals]
-        probVals = normProbs  ## Normalizing mostly for the empirical calculation
-        if self.toPlotInd is True:
-            if len(readPercs) > 2 and len(probVals) > 2:
-                self.makeSanityCheckPlotsPerRead(readDict,readPercs,probVals,card,n,ix)
-        wDist = wasserstein_distance(readPercs, probVals)
-        similarity = cosine_similarity(np.array(readPercs).reshape(1,-1), 
-                                    np.array(probVals).reshape(1,-1))[0,0]
-        eDist = energy_distance(readPercs, probVals)
-        empDist = self.calcEmpDist(readPercs, probVals)
-        return(wDist, similarity, eDist, empDist, readSupport)
+        if readPercs is None:
+            return None
+        else:
+            probVals = [hash[k] for k in readDict.keys()]
+            normProbs = [p / sum(probVals) for p in probVals]
+            probVals = normProbs  ## Normalizing mostly for the empirical calculation
+            if self.toPlotInd is True:
+                if len(readPercs) > 2 and len(probVals) > 2:
+                    self.makeSanityCheckPlotsPerRead(readDict,readPercs,probVals,card,n,ix)
+            wDist = wasserstein_distance(readPercs, probVals)
+            similarity = cosine_similarity(np.array(readPercs).reshape(1,-1), 
+                                        np.array(probVals).reshape(1,-1))[0,0]
+            eDist = energy_distance(readPercs, probVals)
+            empDist = self.calcEmpDist(readPercs, probVals)
+            return(wDist, similarity, eDist, empDist, readSupport)
     
     def calcEmpDist(self,readPercs, probVals):
         """Trying a different metric for distance. 
         We will figure out the cutoff later"""
         obs = np.log(readPercs)
         exp = np.log(probVals)
-        obsOverExp = obs/exp
-        meanOE = obsOverExp.mean()
+        if 0 in exp:
+            meanOE = 1
+        else:
+            obsOverExp = obs/exp
+            meanOE = np.mean(obsOverExp[np.isfinite(obsOverExp)])
         return(meanOE)
 
     def makeSanityCheckPlotsPerRead(self,readDict, readPercs, probVals, card, n, ix):

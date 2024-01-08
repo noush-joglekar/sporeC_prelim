@@ -6,6 +6,7 @@ import pickle
 import warnings
 import argparse
 import os
+import pathlib
 import json
 
 import sys
@@ -19,7 +20,11 @@ def main():
     inputPkl = args.inputPkl
     workingDir = args.workingDir
     plotDir = f'{dataDir}{workingDir}{args.plotDir}/'
+    path1 = pathlib.Path(plotDir)
+    path1.mkdir(parents=True, exist_ok=True)
     outDir = f'{dataDir}{workingDir}{args.outDir}/'
+    path2 = pathlib.Path(outDir)
+    path2.mkdir(parents=True, exist_ok=True)
     probHashOutName = f'{outDir}/{args.probHashOutFile}.json'
     seed = args.seed
     quartile = args.quartile
@@ -73,7 +78,7 @@ def main():
         print("File created...moving on")
 
     warnings.filterwarnings('ignore')
-    evalInstance.statsForAllReads(probHash)
+    run = evalInstance.statsForAllReads(probHash)
 
 def parse_args():
     parser = argparse.ArgumentParser(
