@@ -32,8 +32,8 @@ def dfToDict(df,result_dict):
         result_dict[key] = result_dict.get(key, 0) + 1
     return(result_dict)
 
-def sort_key(item):
-    return int(item.split(':')[1])
+def sort_key(item, delimiter):
+    return int(item.split(delimiter)[1])
 
 def dictToDF(hpDict):
     """Finally, takes in a dict and converts to incidence DF 
@@ -41,7 +41,9 @@ def dictToDF(hpDict):
     heuristics later"""
     indices = list(set(flatten([key.split('_') for key in hpDict.keys()])))
     if isinstance(indices[0],str) and ":" in indices[0]:
-        sorted_ix = sorted(indices, key=sort_key)
+        sorted_ix = sorted(indices, key=lambda x: sort_key(x,':'))
+    elif isinstance(indices[0],str) and ":" not in indices[0]:
+        sorted_ix = sorted(indices, key=lambda x: sort_key(x,'Bin'))
     else:
         sorted_ix = indices.sort()
     columns = []
