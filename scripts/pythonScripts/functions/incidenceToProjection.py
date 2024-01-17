@@ -2,15 +2,32 @@ from itertools import combinations
 import numpy as np
 import pandas as pd
 
-def sort_key(item):
-    return int(item.split(':')[1])
+def sort_key(item, delimiter):
+    return int(item.split(delimiter)[1])
+
+def fillInGaps_realData(incDF,delimiter,stepSize):
+    """Sometimes with real data a lot of the bins may be
+    missing from the list of interesting reads. To have a
+    projection matrix that has gaps and no weird re-indexing,
+    this fills the missing Bin IDs"""
+    binIDs = list(incDF.index)
+    start = int(binIDs[0].split(delimiter)[1])
+    end = int(binIDs[-1].split(delimiter)[1])
+    allBins = ["Bin"+str(i) for i in range(start,end + 1,stepSize)]
+    missingBins = list(set(allBins) - set(binIDs))
+    missingDF = pd.DataFrame(0, index=missingBins, 
+                             columns=incDF.columns)
+    fullDF = pd.concat([incDF,missingDF])
+    return fullDF
 
 def makeHiC_fromInc(incDF):
     ## Convert incidence matrix to 2d hiC matrix
     nrow = incDF.shape[0]
     binIDs = list(incDF.index)
     if isinstance(binIDs[0],str) and ":" in binIDs[0]:
-        sorted_binIDs = sorted(binIDs, key=sort_key)
+        sorted_binIDs = sorted(binIDs, key=lambda x: sort_key(x,':'))
+    elif isinstance(binIDs[0],str) and ":" not in binIDs[0]:
+        sorted_binIDs = sorted(binIDs, key=lambda x: sort_key(x,'Bin'))
     else:
         sorted_binIDs = binIDs.sort()
     df = pd.DataFrame(np.zeros(shape = (nrow,nrow)), index=sorted_binIDs, 
@@ -48,7 +65,9 @@ def makeNorm_HiC_fromInc(incDF,weightList):
     nrow = incDF.shape[0]
     binIDs = list(incDF.index)
     if isinstance(binIDs[0],str) and ":" in binIDs[0]:
-        sorted_binIDs = sorted(binIDs, key=sort_key)
+        sorted_binIDs = sorted(binIDs, key=lambda x: sort_key(x,':'))
+    elif isinstance(binIDs[0],str) and ":" not in binIDs[0]:
+        sorted_binIDs = sorted(binIDs, key=lambda x: sort_key(x,'Bin'))
     else:
         sorted_binIDs = binIDs.sort()
     df = pd.DataFrame(np.zeros(shape = (nrow,nrow)), index=sorted_binIDs, 
