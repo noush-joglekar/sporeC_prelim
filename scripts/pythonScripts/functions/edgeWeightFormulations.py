@@ -49,3 +49,20 @@ def finalBounded(binList):
     skipLen = (rCard - 1 - consecBinCounts)
     score = (skipLen + 1) * concatemerLen / (rCard * maxPossLen)
     return(score)
+
+
+def finalBounded_fromEdge(edge,maxPossLen):
+    """Same calculation as above except from edge IDs"""
+    split_edge = edge.split("_")
+    nonZeroBins = [(int(e.split(":")[1])+1)//5 for e in  split_edge]
+
+    rCard = len(split_edge)
+    ixFirst = nonZeroBins[0]
+    ixLast = nonZeroBins[-1]
+
+    concatemerLen = ixLast - ixFirst + 1
+    consecBinCounts = [i - j for i,j in 
+                    zip(nonZeroBins[:0:-1],nonZeroBins[-2::-1])].count(1)
+    skipLen = (rCard - 1 - consecBinCounts)
+    score = (skipLen + 1) * concatemerLen / (rCard * maxPossLen)
+    return(score)
