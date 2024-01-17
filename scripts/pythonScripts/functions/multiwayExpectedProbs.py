@@ -148,7 +148,7 @@ class multiwayEval:
             self.processConcatDFs(allStats[0],"wDist",False,card)
             self.processConcatDFs(allStats[1],"cosineSim",True,card)
             self.processConcatDFs(allStats[2],"eDist",False,card)
-            self.processConcatDFs(allStats[3],"empDist",True,card)
+            self.processConcatDFs(allStats[3],"empDist",False,card)
         for card in [3]:
             allStats = self.statsForAllCardSubsets(card,probHash)
             self.processConcatDFs(allStats[0],"wDist",False,card)
