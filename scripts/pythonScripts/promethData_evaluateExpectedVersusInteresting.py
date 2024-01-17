@@ -1,10 +1,12 @@
 import numpy as np
+import pandas as pd
 import pickle
 import warnings
 import argparse
 import os
 import pathlib
 import json
+from collections import Counter
 
 import sys
 sys.path.append('/gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/v0.analysis/scripts/pythonScripts/functions/')
@@ -12,32 +14,30 @@ from promethData_multiwayExpectedProbs import multiwayEval_realData
 # from multiwayExpectedProbs import multiwayEval
 
 def main():
-    dataDir = '/gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/2023_03_01_v0_dataGathering/PoreC_Fibroblasts/'
-
     args = parse_args()
-    inputPkl = args.inputPkl
-    workingDir = args.workingDir
-    plotDir = f'{dataDir}{workingDir}{args.plotDir}/'
+
+    if os.path.exists(f'{args.dataDir}/{args.workingDir}/{args.inputPkl}'):
+        print("Loading in hyperedge pickle file")
+        with open(f'{args.dataDir}/{args.workingDir}/{args.inputPkl}','rb') as f:
+            hpEdges = pickle.load(f)
+    else:
+        print("Hyperedge pickle file does not exist, generating now")
+        hpEdges = createPklFile(args)
+
+    evaluateInterestingness(args, hpEdges)
+
+    return
+
+def evaluateInterestingness(args, hpEdges):
+
+    plotDir = f'{args.dataDir}{args.workingDir}{args.plotDir}/'
     path1 = pathlib.Path(plotDir)
     path1.mkdir(parents=True, exist_ok=True)
-    outDir = f'{dataDir}{workingDir}{args.outDir}/'
+    outDir = f'{args.dataDir}{args.workingDir}{args.outDir}/'
     path2 = pathlib.Path(outDir)
     path2.mkdir(parents=True, exist_ok=True)
-    probHashOutName = f'{outDir}/{args.probHashOutFile}.json'
-    seed = args.seed
-    quartile = args.quartile
-    toChoose = args.sampleSize
-    print("Input args ------ toChoose:",toChoose)
-    toPlotRef = args.plotRef
-    print("Input args ------ toPlotRef:",toPlotRef)
-    toPlotInd = args.plotInd
-    print("Input args ------ toPlotInd:",toPlotInd)
-    toPlotScatter = args.plotScatter
-    print("Input args ------ toPlotScatter:",toPlotScatter)
 
-    print("Loading in hyperedge pickle file")
-    with open(f'{dataDir}/{inputPkl}','rb') as f:
-        hpEdges = pickle.load(f)
+    probHashOutName = f'{outDir}/{args.probHashOutFile}.json'
 
     print("Processing all the hyperedges from pickle file")
     hpKeys = [k for k in hpEdges.keys()]
@@ -54,16 +54,20 @@ def main():
     print("Updated the input: retaining",len(hpKeys),
           "interactions with chain support of at least 2")
     
-    evalInstance = multiwayEval_realData(keyCard, updatedDict, hpKeys, hpKeys_split, seed,
-                                toChoose, toPlotRef, toPlotInd, toPlotScatter,
-                                quartile, plotDir,outDir)
+    print("Input args ------ toChoose:",args.sampleSize)
+    print("Input args ------ toPlotRef:",args.plotRef)
+    print("Input args ------ toPlotInd:",args.plotInd)
+    print("Input args ------ toPlotScatter:",args.plotScatter)
+    
+    evalInstance = multiwayEval_realData(keyCard, updatedDict, hpKeys, hpKeys_split, args.seed,
+                                args.sampleSize, args.plotRef, args.plotInd, args.plotScatter,
+                                args.quartile, plotDir,outDir)
 
     if os.path.exists(probHashOutName):
         print("Expected probabilities file already exists...moving on")
         with open(probHashOutName,'r') as file:
             tmpHash = json.load(file)
-            probHash = {key: {int(k): v for k, v in value.items()} 
-                        for key, value in tmpHash.items()}
+            probHash = {key: {int(k): v for k, v in value.items()} for key, value in tmpHash.items() if value is not None}
     else:
         print("Expected probabilities file does not exist...creating now")
         probHash = evalInstance.makeAllReferenceHashDicts()
@@ -74,7 +78,34 @@ def main():
     warnings.filterwarnings('ignore')
     run = evalInstance.statsForAllReads(probHash)
 
-    return
+
+def sort_key(item):
+    return int(item.split('Bin')[1])
+
+def createPklFile(args):
+    chromSizes = pd.read_csv(f'{args.dataDir}hg38.chromSizes',sep="\t", names = ['chr','size']).set_index('chr')['size'].to_dict()
+    readConcatemersWClosestGene = f'{args.dataDir}/{args.fragFile}'
+    colnames = ["chr","start","end","readID","readLen","readQual",
+                "geneChr","geneStart","geneEnd","strand","geneID","bioType","geneName","dist","ID"]
+    fullBed = pd.read_csv(readConcatemersWClosestGene,sep = "\t",names = colnames)
+
+    chrFile = fullBed[fullBed['chr']==args.chrom]
+    binSize = 1*10**6 #5*10**5
+    chrBins = [x for x in range(0,chromSizes[args.chrom]+binSize,binSize)]
+    chrFile_binned = pd.cut(chrFile['start'],bins = chrBins, 
+                           labels = ["Bin"+str(i+1) for i in range(len(chrBins)-1)]).rename("binID")
+    chrFile_wBinID = chrFile.merge(chrFile_binned,left_index=True,right_index=True)
+    groupedBins = chrFile_wBinID.groupby('ID')['binID'].apply(list).reset_index(name='Bins')
+
+    edges = ["_".join(sorted(list(set(a)), key=sort_key)) for a in groupedBins['Bins'] if 
+             len(list(set(a))) > 1]
+    
+    hpEdges = dict(Counter(edges))
+
+    with open(f'{args.dataDir}/{args.workingDir}/{args.inputPkl}','wb') as f:
+        pickle.dump(hpEdges,f)
+    
+    return(hpEdges)
 
 
 def parse_args():
@@ -85,10 +116,13 @@ def parse_args():
         by distance for all observed cards. Optional arguments to plot individual reads
         or summary statistics for all""")
 
+    parser.add_argument("dataDir",type=str, help="Main data dir")
     parser.add_argument("workingDir",type=str, help="Working directory relative to data dir")
     parser.add_argument("plotDir",type=str, help="Plot directory relative to working dir")
     parser.add_argument("outDir",type=str, help="Output directory relative to working dir")
-    parser.add_argument("inputPkl", type=str, help="Input pickle file relative to data dir containing reads as hyperedges")
+    parser.add_argument("fragFile",type=str, help="PoreC fragment file relative to working dir")
+    parser.add_argument("chrom",type=str, help="PoreC fragment file relative to working dir")
+    parser.add_argument("inputPkl", type=str, help="Input pickle file relative to workingDir")
     parser.add_argument("probHashOutFile", type=str, help="Name of probability reference hash")
     parser.add_argument("seed", type=int, help="Seed for read sampling")
     parser.add_argument("sampleSize", type=int, help="Number of reads to sample")

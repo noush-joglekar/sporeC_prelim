@@ -63,13 +63,16 @@ class multiwayEval_realData:
             readSupport, nWayDict = self.makeNWayDict(ix,n)
             for key in nWayDict.keys():
                 mainDict[key] += nWayDict[key]
-
         normalized_values = self.getProbabilitiesByDist(mainDict)
-        if self.toPlotRef is True:
-            self.plotReadFreqsPerCard(mainDict,normalized_values,card,n)
-        
-        probabilityDict = {list(mainDict.keys())[ix]:normalized_values[ix] for ix in range(len(normalized_values))}
-        return(probabilityDict)
+
+        if normalized_values is None: ##### TEST
+            return 
+        else:
+            if self.toPlotRef is True:
+                self.plotReadFreqsPerCard(mainDict,normalized_values,card,n)
+            
+            probabilityDict = {list(mainDict.keys())[ix]:normalized_values[ix] for ix in range(len(normalized_values))}
+            return(probabilityDict)
     
     def makeNWayDict(self,ix,n): ### Breaks down when filtered
         """For a high cardinality read, make a dictionary
@@ -146,10 +149,11 @@ class multiwayEval_realData:
         """Wrapper for all reads"""
         for card in range(max(self.keyCard),3,-1):
             allStats = self.statsForAllCardSubsets(card,probHash)
-            self.processConcatDFs(allStats[0],"wDist",False,card)
-            self.processConcatDFs(allStats[1],"cosineSim",True,card)
-            self.processConcatDFs(allStats[2],"eDist",False,card)
-            self.processConcatDFs(allStats[3],"empDist",True,card)
+            if allStats is not None:
+                self.processConcatDFs(allStats[0],"wDist",False,card)
+                self.processConcatDFs(allStats[1],"cosineSim",True,card)
+                self.processConcatDFs(allStats[2],"eDist",False,card)
+                self.processConcatDFs(allStats[3],"empDist",True,card)
         for card in [3]:
             allStats = self.statsForAllCardSubsets(card,probHash)
             self.processConcatDFs(allStats[0],"wDist",False,card)
@@ -198,40 +202,46 @@ class multiwayEval_realData:
         print("Calculating for card=",card)
         ixList = [index for index,element in enumerate(self.keyCard) if element == card]
         print("There are ",len(ixList),"reads")
-        cardToChoose = min(self.toChoose,len(ixList))
-        print("Calculating stats for",cardToChoose,"reads")
-        random.seed(self.seed)
-        revised_ixes = random.sample(ixList,cardToChoose)
-        C1 = []
-        C2 = []
-        C3 = []
-        C4 = []
-        for n in range(2,card):
-            stats = self.getStatsPerCard(card,n,probHash,revised_ixes)
-            C1.append(stats[0])
-            C2.append(stats[1])
-            C3.append(stats[2])
-            C4.append(stats[3])
-            if n == 2:
-                C5 = stats[4]
-        cN = [str(card)+"Sub"+str(i) for i in range(2,card)]
-        df1 = pd.DataFrame(C1).T
-        df2 = pd.DataFrame(C2).T
-        df3 = pd.DataFrame(C3).T
-        df4 = pd.DataFrame(C4).T
-        df1.columns = cN
-        df1['Edge_ix'] = revised_ixes
-        df1['ReadSupport'] = C5
-        df2.columns = cN
-        df2['Edge_ix'] = revised_ixes
-        df2['ReadSupport'] = C5
-        df3.columns = cN
-        df3['Edge_ix'] = revised_ixes
-        df3['ReadSupport'] = C5
-        df4.columns = cN
-        df4['Edge_ix'] = revised_ixes
-        df4['ReadSupport'] = C5
-        return(df1,df2,df3,df4)
+        if len(ixList) > 1:
+            cardToChoose = min(self.toChoose,len(ixList))
+            print("Calculating stats for",cardToChoose,"reads")
+            random.seed(self.seed)
+            revised_ixes = random.sample(ixList,cardToChoose)
+            C1 = []
+            C2 = []
+            C3 = []
+            C4 = []
+            expHashNames = []
+            for n in range(2,card):
+                stats = self.getStatsPerCard(card,n,probHash,revised_ixes)
+                if stats is not None:
+                    expHashNames.append(str(card)+"Sub"+str(n))
+                    C1.append(stats[0])
+                    C2.append(stats[1])
+                    C3.append(stats[2])
+                    C4.append(stats[3])
+                if n == 2: ## None clause?
+                    C5 = stats[4]
+                    filteredIxes = stats[5]
+            #cN = [str(card)+"Sub"+str(i) for i in range(2,card)]
+            cN = expHashNames
+            df1 = pd.DataFrame(C1).T
+            df2 = pd.DataFrame(C2).T
+            df3 = pd.DataFrame(C3).T
+            df4 = pd.DataFrame(C4).T
+            df1.columns = cN
+            df1['Edge_ix'] = filteredIxes
+            df1['ReadSupport'] = C5
+            df2.columns = cN
+            df2['Edge_ix'] = filteredIxes
+            df2['ReadSupport'] = C5
+            df3.columns = cN
+            df3['Edge_ix'] = filteredIxes
+            df3['ReadSupport'] = C5
+            df4.columns = cN
+            df4['Edge_ix'] = filteredIxes
+            df4['ReadSupport'] = C5
+            return(df1,df2,df3,df4)
 
     def getStatsPerCard(self,card,n,probHash,revised_ixes):
         """Per cardinality, get a subset of reads (for computational
@@ -242,16 +252,19 @@ class multiwayEval_realData:
         edistList = []
         empDistList = []
         readSuppList = []
+        filteredIx = []
         expHash = f'{card}sub{n}'
         for ix in revised_ixes:
-            stats = self.getReadExpectednessStats(card,ix,n,probHash[expHash])
-            if stats is not None:
-                wdistList.append(stats[0])
-                cosList.append(stats[1])
-                edistList.append(stats[2])
-                empDistList.append(stats[3])
-                readSuppList.append(stats[4])
-        return(wdistList, cosList, edistList, empDistList, readSuppList)
+            if expHash in probHash:
+                stats = self.getReadExpectednessStats(card,ix,n,probHash[expHash])
+                if stats is not None:
+                    wdistList.append(stats[0])
+                    cosList.append(stats[1])
+                    edistList.append(stats[2])
+                    empDistList.append(stats[3])
+                    readSuppList.append(stats[4])
+                    filteredIx.append(ix)
+        return(wdistList, cosList, edistList, empDistList, readSuppList, filteredIx)
     
     def getReadExpectednessStats(self,card,ix,n,hash):
         """Per read, get the observed distribution of n-way contacts
