@@ -10,16 +10,20 @@
 #SBATCH --mail-user=ajoglekar@nygenome.org
 #SBATCH --mail-type=ALL
 
-echo "Starting at:" `date` >> promethPoreC_preprocess.log
+inputDir=$1;
+outputDir=$2;
+logFile=$3;
 
-echo "This is job number:" $SLURM_JOB_ID >> promethPoreC_preprocess.log
-echo "Running on node:" `hostname` >> promethPoreC_preprocess.log
-echo "Running on cluster:" $SLURM_CLUSTER_NAME >> promethPoreC_preprocess.log
-echo "This job was assigned the temporary (local) directory:" $TMPDIR >> promethPoreC_preprocess.log
+echo "Starting at:" `date` >> $logFile
 
-for i in $(ls NlaIII_GM12878_data/*alignments.csv.gz) ; do batch=$(echo $i | awk '{split($1,b,"_"); print b[6]}') ; echo "Processing batch "$batch; \
+echo "This is job number:" $SLURM_JOB_ID >> $logFile
+echo "Running on node:" `hostname` >> $logFile
+echo "Running on cluster:" $SLURM_CLUSTER_NAME >> $logFile
+echo "This job was assigned the temporary (local) directory:" $TMPDIR >> $logFile
+
+for i in $(ls $inputDir/*alignments.csv.gz) ; do batch=$(echo $i | awk '{split($1,b,"_"); print b[6]}') ; echo "Processing batch "$batch; \
 sh /gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/v0.analysis/scripts/bashScripts/getGeneNamesFromChromunities_v1.bash $i \
-$batch NlaIII_GM12878_output/ ; done
+$batch $outputDir ; done
 
 rm fragFile*
 
