@@ -22,7 +22,7 @@ def process_chunk(dataDir, args, read, extraPerChunk, prob, chunk):
             with open(filePath,'rb') as f:
                 bIncDict = pickle.load(f)
                 if read in bIncDict:
-                    print("Chose chain",ix,"as sample containing read of interest")
+                    #print("Chose chain",ix,"as sample containing read of interest")
                     result_dict = appendSingleBIncDict(bIncDict,result_dict)
                 else:
                     r = random.random()
