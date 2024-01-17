@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --job-name=vc_s2
-#SBATCH --time=3:00:00   # HH/MM/SS
+#SBATCH --time=8:00:00   # HH/MM/SS
 #SBATCH --mem=12G   # memory requested, units available: K,M,G,T
 #SBATCH --mail-user=ajoglekar@nygenome.org
 #SBATCH --mail-type=ALL
