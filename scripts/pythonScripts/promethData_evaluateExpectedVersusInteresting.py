@@ -10,8 +10,7 @@ from collections import Counter
 
 import sys
 sys.path.append('/gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/v0.analysis/scripts/pythonScripts/functions/')
-from promethData_multiwayExpectedProbs import multiwayEval_realData
-# from multiwayExpectedProbs import multiwayEval
+from promethData_multiwayExpectedProbs import multiwayEval_realData, cutoffEval
 
 def main():
     args = parse_args()
@@ -41,11 +40,14 @@ def evaluateInterestingness(args, hpEdges):
 
     print("Processing all the hyperedges from pickle file")
     hpKeys = [k for k in hpEdges.keys()]
+    keyCard = [len(k.split("_")) for k in hpKeys]
     print("A total of",len(hpKeys),"initial interactions")
 
     readSupport = [v for v in hpEdges.values()]
-    atLeastTwoChains = [i for i,x in enumerate(readSupport) if x >=2]
-    updatedDict = {hpKeys[i]:readSupport[i] for i in atLeastTwoChains}
+    cE = cutoffEval(keyCard,readSupport)
+    passedReadIx = cE.runForAllCards()
+    # atLeastTwoChains = [i for i,x in enumerate(readSupport) if x >=2]
+    updatedDict = {hpKeys[i]:readSupport[i] for i in passedReadIx}
 
     hpKeys = [k for k in updatedDict.keys()]
     hpKeys_split = [k.split("_") for k in updatedDict.keys()]

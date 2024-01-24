@@ -13,17 +13,20 @@ sys.path.append('/gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_m
 from chains import dictToDF, dfToDict
 from incidenceToProjection import makeHiC_fromInc, fillInGaps_realData
 from edgeWeightFormulations import finalBounded
+from promethData_multiwayExpectedProbs import cutoffEval
 
 def main():
     args = parse_args()
     dfDir = f'{args.dataDir}{args.runDir}dfs_{args.chrom}/'
     outDir = f'{args.dataDir}{args.outputDir}'
+    matDir = f'{outDir}/matrices/'
+    os.makedirs(matDir,exist_ok=True)
     cardList = [int(c) for c in args.card.split(",")]
     dfList = []
     okayCards = []
     for card in cardList:
         card_fullDF = perCard(args,dfDir,
-                            outDir,card)
+                            outDir,matDir,card)
         if card_fullDF is not None:
             dfList.append(card_fullDF)
             okayCards.append(card)
@@ -33,13 +36,13 @@ def main():
             print(f"Combining the interesting reads from {updatedCards}")
             collatedIncDF = pd.concat(dfList,axis = 1)
             print(collatedIncDF.shape)
-            plotInterestingProjMat(args,collatedIncDF,outDir,updatedCards)
+            plotInterestingProjMat(args,collatedIncDF,outDir,matDir,updatedCards)
         else:
             print("Nothing to combine!")
     return
 
 
-def perCard(args,dfDir,outDir,card):
+def perCard(args,dfDir,outDir,matDir,card):
     coSimFile = pd.read_csv(f'{dfDir}cosineSim_card{card}.csv',sep = "\t")
     empDistFile = pd.read_csv(f'{dfDir}empDist_card{card}.csv',sep = "\t")
     pklFile = f'{args.dataDir}{args.runDir}hyperEdges_{args.identifier}_{args.chrom}.pkl'
@@ -60,7 +63,7 @@ def perCard(args,dfDir,outDir,card):
         print("Distribution of edge scores")
         plotEdgeScores(args,outDir,intScores,randScores,card)
         print("Projection matrix for interesting reads")
-        fullDF = plotInterestingProjMat(args,subset_incDF,outDir,card)
+        fullDF = plotInterestingProjMat(args,subset_incDF,outDir,matDir,card)
         print("Projection matrix for the entire dataset")
         plotOG_fullDataset(args,updatedDict,outDir)
         print(f"Skipping the projection matrix for all reads for card = {card}")
@@ -75,12 +78,14 @@ def extractInterestingEdges(args,pklFile):
         hpEdges = pickle.load(f)
     print(f"Processing all the hyperedges for {args.identifier} {args.chrom} from pickle file")
     hpKeys = [k for k in hpEdges.keys()]
+    keyCard = [len(k.split("_")) for k in hpKeys]
     print("A total of",len(hpKeys),"initial interactions")
     
     readSupport = [v for v in hpEdges.values()]
-    atLeastTwoChains = [i for i,x in enumerate(readSupport) if x >=2]
+    cE = cutoffEval(keyCard,readSupport)
+    passedReadIx = cE.runForAllCards()
 
-    updatedDict = {hpKeys[i]:readSupport[i] for i in atLeastTwoChains}
+    updatedDict = {hpKeys[i]:readSupport[i] for i in passedReadIx}
     hpKeys = [k for k in updatedDict.keys()]
     print("A total of",len(hpKeys),"final interactions")
     return([hpKeys,updatedDict,hpEdges])
@@ -99,9 +104,10 @@ def getEdgeScores(consensusIx,coSimFile,hpKeys,updatedDict):
     randomBoundedScores = [finalBounded(list(rsubset_incDF[c])) for c in rsubset_incDF.columns]
     return([finalBoundedScores,randomBoundedScores,subset_incDF])
 
-def plotInterestingProjMat(args,subset_incDF,outDir,card):
+def plotInterestingProjMat(args,subset_incDF,outDir,matDir,card):
     fullDF = fillInGaps_realData(subset_incDF,"Bin",1)
     projMat = makeHiC_fromInc(fullDF)
+    pd.to_pickle(projMat,f'{matDir}projMat_Int_{args.identifier}_Card{card}_{args.chrom}')
     mv = np.nanmax(projMat)
     if mv <= 100:
         vm = 10

@@ -10,6 +10,27 @@ from scipy.stats import energy_distance
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+class cutoffEval:
+    def __init__(self, keyCard, readSupport):
+        self.keyCard = keyCard
+        self.readSupport = readSupport
+
+    def getCutoff(self, card):
+        cRI = [i for i,x in enumerate(self.keyCard) if x == card]
+        cRS = [self.readSupport[i] for i,x in enumerate(self.keyCard) if x == card]
+        cardReadSupport = pd.Series(cRS)
+        cutOff = cardReadSupport.describe()['75%']
+        print(f"Cutoff = {cutOff} for card = {card}")
+        cardIx = [cRI[i] for i in range(len(cRI)) if cRS[i] >= cutOff]
+        return(cardIx)
+
+    def runForAllCards(self):
+        eL = []
+        for card in list(set(self.keyCard)):
+            aboveCutoffIx = self.getCutoff(card)
+            eL.extend(aboveCutoffIx)
+        return(eL)
+    
 class multiwayEval_realData:
 
     def __init__(self, keyCard, hpEdges, hpKeys, hpKeys_split, seed, 
