@@ -32,7 +32,7 @@ time python \
 v1.evaluateExpectedVersusInteresting_NlaIII_${cellLine}/ Plots_${chr}/ dfs_${chr}/ \
 NlaIII_${cellLine}_output_byChr/NlaIII_${cellLine}_${chr}.gz ${chr} \
 hyperEdges_${cellLine}_${chr}.pkl probHash_${cellLine}_${chr} \
-101 3 25 --plotInd --plotRef &>> eval_${cellLine}.log
+101 3 25 --plotInd --plotRef
 
 echo "Run finished for 3 reads per card and individual reads plotted"
 
@@ -42,7 +42,7 @@ time python \
 v1.evaluateExpectedVersusInteresting_NlaIII_${cellLine}/ Plots_${chr}/ dfs_${chr}/ \
 NlaIII_${cellLine}_output_byChr/NlaIII_${cellLine}_${chr}.gz ${chr} \
 hyperEdges_${cellLine}_${chr}.pkl probHash_${cellLine}_${chr} \
-101 200 25 --plotScatter &>> eval_${cellLine}.log
+101 200 25 --plotScatter
 
 echo "Run finished for 200 reads per card and scatterplots generated"
 echo "Starting with full dataset now"
@@ -53,7 +53,7 @@ time python \
 v1.evaluateExpectedVersusInteresting_NlaIII_${cellLine}/ Plots_${chr}/ dfs_${chr}/ \
 NlaIII_${cellLine}_output_byChr/NlaIII_${cellLine}_${chr}.gz ${chr} \
 hyperEdges_${cellLine}_${chr}.pkl probHash_${cellLine}_${chr} \
-101 2000000 25 &>> eval_${cellLine}.log
+101 2000000 25
 
 echo "Run finished for 2 mil reads per card"
 
