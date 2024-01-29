@@ -55,12 +55,12 @@ def evaluateInterestingness(args, hpEdges):
 
     print("Updated the input: retaining",len(hpKeys),
           "interactions with chain support of at least 2")
-    
+
     print("Input args ------ toChoose:",args.sampleSize)
     print("Input args ------ toPlotRef:",args.plotRef)
     print("Input args ------ toPlotInd:",args.plotInd)
     print("Input args ------ toPlotScatter:",args.plotScatter)
-    
+
     evalInstance = multiwayEval_realData(keyCard, updatedDict, hpKeys, hpKeys_split, args.seed,
                                 args.sampleSize, args.plotRef, args.plotInd, args.plotScatter,
                                 args.quartile, plotDir,outDir)
