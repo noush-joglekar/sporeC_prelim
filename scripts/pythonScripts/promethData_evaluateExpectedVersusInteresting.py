@@ -44,10 +44,10 @@ def evaluateInterestingness(args, hpEdges):
     print("A total of",len(hpKeys),"initial interactions")
 
     readSupport = [v for v in hpEdges.values()]
-    cE = cutoffEval(keyCard,readSupport)
-    passedReadIx = cE.runForAllCards()
-    # atLeastTwoChains = [i for i,x in enumerate(readSupport) if x >=2]
-    updatedDict = {hpKeys[i]:readSupport[i] for i in passedReadIx}
+#    cE = cutoffEval(keyCard,readSupport)
+#    passedReadIx = cE.runForAllCards()
+    atLeastTwoChains = [i for i,x in enumerate(readSupport) if x >=2]
+    updatedDict = {hpKeys[i]:readSupport[i] for i in atLeastTwoChains} #passedReadIx
 
     hpKeys = [k for k in updatedDict.keys()]
     hpKeys_split = [k.split("_") for k in updatedDict.keys()]
@@ -92,7 +92,7 @@ def createPklFile(args):
     fullBed = pd.read_csv(readConcatemersWClosestGene,sep = "\t",names = colnames)
 
     chrFile = fullBed[fullBed['chr']==args.chrom]
-    binSize = 1*10**6 #5*10**5
+    binSize = 5*10**4 #1*10**6 #5*10**5
     chrBins = [x for x in range(0,chromSizes[args.chrom]+binSize,binSize)]
     chrFile_binned = pd.cut(chrFile['start'],bins = chrBins, 
                            labels = ["Bin"+str(i+1) for i in range(len(chrBins)-1)]).rename("binID")
