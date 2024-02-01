@@ -63,7 +63,7 @@ class multiwayEval_realData:
         between subsets"""
         probHash = defaultdict(dict)
 
-        for card in range(max(self.keyCard),2,-1):
+        for card in range(min([10,max(self.keyCard)]),2,-1):
             print("Calculating for card=",card)
             ixList = [index for index,element in enumerate(self.keyCard) if element == card]
             print("There are ",len(ixList),"reads")
@@ -168,7 +168,7 @@ class multiwayEval_realData:
     
     def statsForAllReads(self,probHash):
         """Wrapper for all reads"""
-        for card in range(max(self.keyCard),3,-1):
+        for card in range(min([10,max(self.keyCard)]),3,-1):
             allStats = self.statsForAllCardSubsets(card,probHash)
             if allStats is not None:
                 self.processConcatDFs(allStats[0],"wDist",False,card)
