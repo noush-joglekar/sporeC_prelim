@@ -3,10 +3,10 @@
 #SBATCH --partition=pe2   # cluster-specific
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --array=1-22
+#SBATCH --array=1,4,7,13
 #SBATCH --cpus-per-task=1
 #SBATCH --job-name=eval_cellLine
-#SBATCH --time=12:00:00   # HH/MM/SS
+#SBATCH --time=24:00:00   # HH/MM/SS
 #SBATCH --mem=64G   # memory requested, units available: K,M,G,T
 #SBATCH --mail-user=ajoglekar@nygenome.org
 #SBATCH --mail-type=ALL
@@ -30,7 +30,7 @@ source activate hypergraph_poreC
 time python \
 /gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/v0.analysis/scripts/pythonScripts/promethData_evaluateExpectedVersusInteresting.py \
 /gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/2023_03_01_v0_dataGathering/v1_poreC_explore/ \
-v1.evaluateExpectedVersusInteresting_NlaIII_${cellLine}_${minReads}/ Plots_${chr}/ dfs_${chr}/ \
+v1.evaluateExpectedVersusInteresting_NlaIII_50KB_${cellLine}_${minReads}/ Plots_${chr}/ dfs_${chr}/ \
 NlaIII_${cellLine}_output_byChr/NlaIII_${cellLine}_${chr}.gz ${chr} \
 hyperEdges_${cellLine}_${chr}.pkl probHash_${cellLine}_${chr} \
 101 3 25 --plotInd --plotRef
@@ -40,7 +40,7 @@ echo "Run finished for 3 reads per card and individual reads plotted"
 time python \
 /gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/v0.analysis/scripts/pythonScripts/promethData_evaluateExpectedVersusInteresting.py \
 /gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/2023_03_01_v0_dataGathering/v1_poreC_explore/ \
-v1.evaluateExpectedVersusInteresting_NlaIII_${cellLine}_${minReads}/ Plots_${chr}/ dfs_${chr}/ \
+v1.evaluateExpectedVersusInteresting_NlaIII_50KB_${cellLine}_${minReads}/ Plots_${chr}/ dfs_${chr}/ \
 NlaIII_${cellLine}_output_byChr/NlaIII_${cellLine}_${chr}.gz ${chr} \
 hyperEdges_${cellLine}_${chr}.pkl probHash_${cellLine}_${chr} \
 101 200 25 --plotScatter
@@ -51,7 +51,7 @@ echo "Starting with full dataset now"
 time python \
 /gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/v0.analysis/scripts/pythonScripts/promethData_evaluateExpectedVersusInteresting.py \
 /gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/2023_03_01_v0_dataGathering/v1_poreC_explore/ \
-v1.evaluateExpectedVersusInteresting_NlaIII_${cellLine}_${minReads}/ Plots_${chr}/ dfs_${chr}/ \
+v1.evaluateExpectedVersusInteresting_NlaIII_50KB_${cellLine}_${minReads}/ Plots_${chr}/ dfs_${chr}/ \
 NlaIII_${cellLine}_output_byChr/NlaIII_${cellLine}_${chr}.gz ${chr} \
 hyperEdges_${cellLine}_${chr}.pkl probHash_${cellLine}_${chr} \
 101 2000000 25
