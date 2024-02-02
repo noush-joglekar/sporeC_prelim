@@ -23,12 +23,14 @@ source activate hypergraph_poreC
 echo "Starting job ...."
 
 cellLine=$1;
+inputDir=$2;
+outDir=$3;
 chrom="chr"$SLURM_ARRAY_TASK_ID;
 
 python \
 /gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/v0.analysis/scripts/pythonScripts/v3.analysisPerChrom.py \
 /gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/2023_03_01_v0_dataGathering/v1_poreC_explore/ \
-v1.evaluateExpectedVersusInteresting_NlaIII_${cellLine}_3/ projMatPlots_${cellLine}_3/ $chrom $cellLine 3,4,5,6
+${inputDir} ${outDir}/ $chrom $cellLine 3,4,5,6
 
 echo "Job finished or was terminated, please check logs"
 exit
