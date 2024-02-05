@@ -233,6 +233,8 @@ class multiwayEval_realData:
             C3 = []
             C4 = []
             expHashNames = []
+            filteredIxes = []
+            rsList = []
             for n in range(2,card):
                 stats = self.getStatsPerCard(card,n,probHash,revised_ixes)
                 if stats is not None:
@@ -241,27 +243,27 @@ class multiwayEval_realData:
                     C2.append(stats[1])
                     C3.append(stats[2])
                     C4.append(stats[3])
-                if n == 2: ## None clause?
-                    C5 = stats[4]
-                    filteredIxes = stats[5]
-            #cN = [str(card)+"Sub"+str(i) for i in range(2,card)]
+                    rsList.append(stats[4])
+                    filteredIxes.append(stats[5])
+            finalIxes = max(filteredIxes,key = len)
+            finalRS = max(rsList,key = len)
             cN = expHashNames
             df1 = pd.DataFrame(C1).T
             df2 = pd.DataFrame(C2).T
             df3 = pd.DataFrame(C3).T
             df4 = pd.DataFrame(C4).T
             df1.columns = cN
-            df1['Edge_ix'] = filteredIxes
-            df1['ReadSupport'] = C5
+            df1['Edge_ix'] = finalIxes
+            df1['ReadSupport'] = finalRS
             df2.columns = cN
-            df2['Edge_ix'] = filteredIxes
-            df2['ReadSupport'] = C5
+            df2['Edge_ix'] = finalIxes
+            df2['ReadSupport'] = finalRS
             df3.columns = cN
-            df3['Edge_ix'] = filteredIxes
-            df3['ReadSupport'] = C5
+            df3['Edge_ix'] = finalIxes
+            df3['ReadSupport'] = finalRS
             df4.columns = cN
-            df4['Edge_ix'] = filteredIxes
-            df4['ReadSupport'] = C5
+            df4['Edge_ix'] = finalIxes
+            df4['ReadSupport'] = finalRS
             return(df1,df2,df3,df4)
 
     def getStatsPerCard(self,card,n,probHash,revised_ixes):
@@ -285,6 +287,9 @@ class multiwayEval_realData:
                     empDistList.append(stats[3])
                     readSuppList.append(stats[4])
                     filteredIx.append(ix)
+        #         else:
+        #             print(ix)
+        # return
         return(wdistList, cosList, edistList, empDistList, readSuppList, filteredIx)
     
     def getReadExpectednessStats(self,card,ix,n,hash):
