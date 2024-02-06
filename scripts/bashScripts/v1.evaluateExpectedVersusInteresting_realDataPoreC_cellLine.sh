@@ -3,7 +3,7 @@
 #SBATCH --partition=pe2   # cluster-specific
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --array=1-22
+#SBATCH --array=1,4,7,13
 #SBATCH --cpus-per-task=1
 #SBATCH --job-name=eval_cellLine
 #SBATCH --time=24:00:00   # HH/MM/SS
@@ -11,7 +11,9 @@
 #SBATCH --mail-user=ajoglekar@nygenome.org
 #SBATCH --mail-type=ALL
 
+## Works with GM12878, HG002, HCC1954 with the percentage-based min-read cutoff. Bin size is 1MB
 cellLine=$1;
+minReads=$2;
 
 echo "Starting at:" `date` >> eval_${cellLine}.log
 

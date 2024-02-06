@@ -13,7 +13,7 @@ sys.path.append('/gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_m
 from chains import dictToDF, dfToDict
 from incidenceToProjection import makeHiC_fromInc, fillInGaps_realData
 from edgeWeightFormulations import finalBounded
-from promethData_multiwayExpectedProbs import cutoffEval
+#from promethData_multiwayExpectedProbs import cutoffEval
 
 def main():
     args = parse_args()
@@ -82,10 +82,10 @@ def extractInterestingEdges(args,pklFile):
     print("A total of",len(hpKeys),"initial interactions")
     
     readSupport = [v for v in hpEdges.values()]
-    cE = cutoffEval(keyCard,readSupport)
-    passedReadIx = cE.runForAllCards()
-
-    updatedDict = {hpKeys[i]:readSupport[i] for i in passedReadIx}
+#    cE = cutoffEval(keyCard,readSupport)
+#    passedReadIx = cE.runForAllCards()
+    atLeastTwoChains = [i for i,x in enumerate(readSupport) if x >=2]
+    updatedDict = {hpKeys[i]:readSupport[i] for i in atLeastTwoChains} #passedReadIx
     hpKeys = [k for k in updatedDict.keys()]
     print("A total of",len(hpKeys),"final interactions")
     return([hpKeys,updatedDict,hpEdges])
