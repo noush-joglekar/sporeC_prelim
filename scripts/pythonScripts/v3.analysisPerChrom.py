@@ -26,7 +26,7 @@ def main():
     okayCards = []
     for card in cardList:
         card_fullDF = perCard(args,dfDir,
-                            outDir,matDir,args.empCutoff,card)
+                            outDir,matDir,card)
         if card_fullDF is not None:
             dfList.append(card_fullDF)
             okayCards.append(card)
@@ -42,7 +42,7 @@ def main():
     return
 
 
-def perCard(args,dfDir,outDir,matDir,empCutoff,card):
+def perCard(args,dfDir,outDir,matDir,card):
     coSimFile = pd.read_csv(f'{dfDir}cosineSim_card{card}.csv',sep = "\t")
     empDistFile = pd.read_csv(f'{dfDir}empDist_card{card}.csv',sep = "\t")
     pklFile = f'{args.dataDir}{args.runDir}hyperEdges_{args.identifier}_{args.chrom}.pkl'
@@ -52,7 +52,7 @@ def perCard(args,dfDir,outDir,matDir,empCutoff,card):
         hpKeys, updatedDict, hpEdges = extractInterestingEdges(args,pklFile)
 
         print("Determining which reads are interesting ...")
-        empDistStatus = calcDistMetricStatus(empDistFile,empCutoff)
+        empDistStatus = calcDistMetricStatus(empDistFile,args.empCutoff)
         agreement_status = getAgreementStatus(coSimFile,empDistStatus)
         consensusIx = [coSimFile['Edge_ix'][ix] for ix,x in enumerate(agreement_status) 
                        if x == "Agree:Interesting"]
