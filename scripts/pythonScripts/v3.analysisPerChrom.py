@@ -26,7 +26,7 @@ def main():
     okayCards = []
     for card in cardList:
         card_fullDF = perCard(args,dfDir,
-                            outDir,matDir,card)
+                            outDir,matDir,args.empCutoff,card)
         if card_fullDF is not None:
             dfList.append(card_fullDF)
             okayCards.append(card)
@@ -42,7 +42,7 @@ def main():
     return
 
 
-def perCard(args,dfDir,outDir,matDir,card):
+def perCard(args,dfDir,outDir,matDir,empCutoff,card):
     coSimFile = pd.read_csv(f'{dfDir}cosineSim_card{card}.csv',sep = "\t")
     empDistFile = pd.read_csv(f'{dfDir}empDist_card{card}.csv',sep = "\t")
     pklFile = f'{args.dataDir}{args.runDir}hyperEdges_{args.identifier}_{args.chrom}.pkl'
@@ -52,7 +52,7 @@ def perCard(args,dfDir,outDir,matDir,card):
         hpKeys, updatedDict, hpEdges = extractInterestingEdges(args,pklFile)
 
         print("Determining which reads are interesting ...")
-        empDistStatus = calcDistMetricStatus(empDistFile)
+        empDistStatus = calcDistMetricStatus(empDistFile,empCutoff)
         agreement_status = getAgreementStatus(coSimFile,empDistStatus)
         consensusIx = [coSimFile['Edge_ix'][ix] for ix,x in enumerate(agreement_status) 
                        if x == "Agree:Interesting"]
@@ -181,7 +181,7 @@ def getAgreementStatus(coSimFile,empDistStatus):
     agreement_status = ["Agree:Interesting" if v1 == 1 and v2 == 1 else 
                     "CoSim only" if v1 == 1 else "empDist only" if v2 == 1 
                     else "Expected" for 
-                    v1, v2 in zip(coSimFile['Status'], empDistStatus)]
+                    v1, v2 in zip(coSimFile['Status'], empDistStatus)] #empDistStatus CHANGE
     return(agreement_status)
 
 def getCutoff(summaryDF,quartile):
@@ -189,14 +189,14 @@ def getCutoff(summaryDF,quartile):
     cutoff = pd.Series(summaryDF['mean']).describe()[q]
     return(cutoff)
 
-def calcDistMetricStatus(inFile):
+def calcDistMetricStatus(inFile,empCutoff):
     """Repeat of what is in original file. I kept messing up for emp dist.
     But this is good incase we decide to change the 4th quartile stipulation
     Will just have to change to 25 and less-equal for cosine"""
     summary_dist = inFile.filter(like="Sub").apply(
         lambda row: [np.mean(row), np.std(row)], axis=1, result_type='expand')
     summary_dist.columns = ['mean','sd']
-    distCutoff = getCutoff(summary_dist,75)
+    distCutoff = getCutoff(summary_dist,empCutoff)
     distStatus = [1 if x else 0 for x in (summary_dist['mean'] >= distCutoff)]
     return(distStatus)
 
@@ -210,6 +210,7 @@ def parse_args():
     parser.add_argument("outputDir",type=str, help="Output directory where plots will be placed")
     parser.add_argument("chrom",type=str, help="PoreC fragment file relative to working dir")
     parser.add_argument("identifier",type=str, help="PoreC fragment file relative to working dir")
+    parser.add_argument("empCutoff", type =int, help = "cutoff for int reads from empDist distr", default=75)
     parser.add_argument("card", type=str, help="Comma separated list of cardinalities to consider")
     parser.add_argument("--combined", action="store_true", 
                         help="Specify if you want a combined proj mat of interesting reads from all cards")
