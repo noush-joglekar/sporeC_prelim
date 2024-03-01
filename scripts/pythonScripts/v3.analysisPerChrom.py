@@ -13,7 +13,7 @@ sys.path.append('/gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_m
 from chains import dictToDF, dfToDict
 from incidenceToProjection import makeHiC_fromInc, fillInGaps_realData
 from edgeWeightFormulations import finalBounded
-#from promethData_multiwayExpectedProbs import cutoffEval
+from promethData_multiwayExpectedProbs import cutoffEval
 
 def main():
     args = parse_args()
@@ -82,19 +82,20 @@ def extractInterestingEdges(args,pklFile):
     print("A total of",len(hpKeys),"initial interactions")
     
     readSupport = [v for v in hpEdges.values()]
-#    cE = cutoffEval(keyCard,readSupport)
-#    passedReadIx = cE.runForAllCards()
-    atLeastTwoChains = [i for i,x in enumerate(readSupport) if x >=2]
-    updatedDict = {hpKeys[i]:readSupport[i] for i in atLeastTwoChains} #passedReadIx
+    cE = cutoffEval(keyCard,readSupport)
+    passedReadIx = cE.runForAllCards()
+    # atLeastTwoChains = [i for i,x in enumerate(readSupport) if x >=2]
+    updatedDict = {hpKeys[i]:readSupport[i] for i in passedReadIx} # atLeastTwoChains
     hpKeys = [k for k in updatedDict.keys()]
     print("A total of",len(hpKeys),"final interactions")
     return([hpKeys,updatedDict,hpEdges])
 
-def getEdgeScores(consensusIx,coSimFile,hpKeys,updatedDict):
+def getEdgeScores(consensusIx,coSimFile,hpKeys,updatedDict,matDir):
     randList = random.sample(range(coSimFile.shape[0]),len(consensusIx))
     subsetKeys = [hpKeys[ix] for ix in consensusIx]
     subsetDict = {key: updatedDict[key] for key in subsetKeys}
     subset_incDF = dictToDF(subsetDict)
+    pd.to_pickle(subset_incDF,f'{matDir}IncDF_IntReads_{args.identifier}_Card{card}_{args.chrom}.pkl')
     finalBoundedScores = [finalBounded(list(subset_incDF[c])) for c in subset_incDF.columns]
 
     rsubsetKeys = [hpKeys[ix] for ix in randList]
@@ -107,7 +108,7 @@ def getEdgeScores(consensusIx,coSimFile,hpKeys,updatedDict):
 def plotInterestingProjMat(args,subset_incDF,outDir,matDir,card):
     fullDF = fillInGaps_realData(subset_incDF,"Bin",1)
     projMat = makeHiC_fromInc(fullDF)
-    pd.to_pickle(projMat,f'{matDir}projMat_Int_{args.identifier}_Card{card}_{args.chrom}')
+    pd.to_pickle(projMat,f'{matDir}projMat_Int_{args.identifier}_Card{card}_{args.chrom}.pkl')
     mv = np.nanmax(projMat)
     if mv <= 100:
         vm = 10
