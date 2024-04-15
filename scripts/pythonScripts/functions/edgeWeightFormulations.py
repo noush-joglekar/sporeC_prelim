@@ -54,7 +54,7 @@ def finalBounded(binList):
 def finalBounded_fromEdge(edge,maxPossLen):
     """Same calculation as above except from edge IDs"""
     split_edge = edge.split("_")
-    nonZeroBins = [(int(e.split(":")[1])+1)//5 for e in  split_edge]
+    nonZeroBins = [(int(e.split(":")[1])+1)//5 if ":" in e else (int(e.split("Bin")[1])) for e in  split_edge]
 
     rCard = len(split_edge)
     ixFirst = nonZeroBins[0]

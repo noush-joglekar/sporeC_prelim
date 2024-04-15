@@ -10,6 +10,8 @@
 #SBATCH --mail-user=ajoglekar@nygenome.org
 #SBATCH --mail-type=ALL
 
+## Had to make modifications for LNCaP
+
 inputDir=$1;
 outputDir=$2;
 logFile=$3;
@@ -21,9 +23,10 @@ echo "Running on node:" `hostname` >> $logFile
 echo "Running on cluster:" $SLURM_CLUSTER_NAME >> $logFile
 echo "This job was assigned the temporary (local) directory:" $TMPDIR >> $logFile
 
-for i in $(ls $inputDir/*alignments.csv.gz) ; do batch=$(echo $i | awk '{split($1,b,"_"); print b[6]}') ; echo "Processing batch "$batch; \
-sh /gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/v0.analysis/scripts/bashScripts/getGeneNamesFromChromunities_v1.bash $i \
+for i in $(ls $inputDir/*full_pore_c.csv.gz) ; do batch=$(echo $i | awk '{split($1,b,"_"); print b[7]}') ; echo "Processing batch "$batch; \
+sh /gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/v0.analysis/scripts/bashScripts/getGeneNamesFromChromunities_LNCaP.bash $i \
 $batch $outputDir ; done
+
 
 echo "Job finished or was terminated, please check logs"
 exit

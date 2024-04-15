@@ -57,8 +57,8 @@ def perCard(args,dfDir,outDir,matDir,card):
         consensusIx = [coSimFile['Edge_ix'][ix] for ix,x in enumerate(agreement_status) 
                        if x == "Agree:Interesting"]
         print(f'There are {len(consensusIx)} interesting reads by cosine similarity and empirical distance calculation')
-        intScores, randScores, subset_incDF = getEdgeScores(consensusIx,
-                            coSimFile,hpKeys,updatedDict)
+        intScores, randScores, subset_incDF = getEdgeScores(args, consensusIx,
+                            coSimFile,hpKeys,updatedDict,matDir,card)
         print('Generating and plotting all the output now ...')
         print("Distribution of edge scores")
         plotEdgeScores(args,outDir,intScores,randScores,card)
@@ -90,7 +90,7 @@ def extractInterestingEdges(args,pklFile):
     print("A total of",len(hpKeys),"final interactions")
     return([hpKeys,updatedDict,hpEdges])
 
-def getEdgeScores(consensusIx,coSimFile,hpKeys,updatedDict,matDir):
+def getEdgeScores(args,consensusIx,coSimFile,hpKeys,updatedDict,matDir,card):
     randList = random.sample(range(coSimFile.shape[0]),len(consensusIx))
     subsetKeys = [hpKeys[ix] for ix in consensusIx]
     subsetDict = {key: updatedDict[key] for key in subsetKeys}
