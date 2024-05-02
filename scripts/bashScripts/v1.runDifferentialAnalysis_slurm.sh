@@ -20,6 +20,8 @@ echo "Running on node:" `hostname`
 echo "Running on cluster:" $SLURM_CLUSTER_NAME 
 echo "This job was assigned the temporary (local) directory:" $TMPDIR
 
+source activate hypergraph_poreC
+
 outDir=$1;
 CT1=$2;
 CT2=$3;
@@ -30,7 +32,7 @@ echo "Processing "$SLURM_ARRAY_TASK_ID
 
 dirName="/gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_multiwayInteractions/2023_03_01_v0_dataGathering/v1_poreC_explore/"${outDir}
 
-if [ -d $dirName ]; then
+if [ ! -d $dirName ]; then
     echo "Creating dir"
     mkdir $dirName
 fi
