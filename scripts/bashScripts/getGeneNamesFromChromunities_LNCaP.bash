@@ -12,6 +12,8 @@
 ## New PoreC output is inconsistent with old one so making changes
 ## No way of getting read length and quality, which was "rl" in OG script
 
+## THINGS SEEM TO NOT MATCH IN QC. First column is random ID, does not correspond to read ID
+
 module load bedtools
 
 fragFile=$1;
@@ -22,8 +24,9 @@ if [ ! -d "$outputDir" ]; then
 mkdir $outputDir
 fi
 
-zcat $fragFile | awk -v batch=$batch '{FS=","; OFS="\t"; if($7=="True" && !($2~"_|EBV") ) {count[$1]++; \
-if(coord[$1]){coord[$1]=coord[$1]"\n"$2"\t"$3"\t"$4"\tRead:"$1}else{coord[$1]=$2"\t"$3"\t"$4"\tRead:"$1}} }END \
+zcat $fragFile | awk -v batch=$batch '{FS=","; if($6!=current) {id++; current=$6;} \
+if($7=="True" && !($2~"_|EBV") ) {count[id]++; \
+if(coord[id]){coord[id]=coord[$id]"\n"$2"\t"$3"\t"$4"\tRead:"id}else{coord[id]=$2"\t"$3"\t"$4"\tRead:"id}} }END \
 {for(c in count) {if(count[c]>=2) {split(coord[c],entries,"\n"); \
 for(en in entries) {print entries[en]"_Card:"count[c]"_Batch:"batch} }} }' > ${outputDir}/fragFile.bed
 
