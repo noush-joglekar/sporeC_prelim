@@ -212,10 +212,10 @@ def parse_args():
     parser.add_argument("identifier",type=str, help="PoreC fragment file relative to working dir")
     parser.add_argument("empCutoff", type =int, help = "cutoff for int reads from empDist distr", default=75)
     parser.add_argument("card", type=str, help="Comma separated list of cardinalities to consider")
-    parser.add_argument("--combined", action="store_true", 
+    parser.add_argument("--combined", action="store_true",
                         help="Specify if you want a combined proj mat of interesting reads from all cards")
     ## CARD. Combined?
-    
+
     return parser.parse_args()
 
 if __name__ == "__main__":
