@@ -50,7 +50,7 @@ fullDF <- rbind(hcc_pre,hg_pre,lnVeh_pre,lnDHT_pre,hcc_post, hg_post, lnVeh_post
 fullDF$chrName <- factor(fullDF$chrName, levels = chrNames)
 
 fullDF$Type <- factor(fullDF$Type, levels <- c("Pre","Post"))
-pdf('postProcessingChrCounts/QC_allCellLines_preAndPost.pdf',10,10,useDingbats = F)
+pdf('postProcessingChrCounts/QC_allCellLines_preAndPost_corrected.pdf',10,10,useDingbats = F)
 ggplot(fullDF, aes(x = chrName, y = counts, fill = CL)) + 
   geom_bar(stat = "identity") +
   facet_grid(Type~CL) +
