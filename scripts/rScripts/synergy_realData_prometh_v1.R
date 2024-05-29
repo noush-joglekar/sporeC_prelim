@@ -196,7 +196,7 @@ targets_exome = gr.reduce(exomeLines+resolution)
 ### 
 
 ## resolution of the pad
-resolution = 1e4 #2.5e4 4e4
+resolution = 2.5e4 #4e4
 tiles = gr.tile(hg_seqlengths(genome = "BSgenome.Hsapiens.UCSC.hg38::Hsapiens"), resolution)
 
 ## Targets
@@ -222,7 +222,7 @@ this_gr_testing$cid = this_gr_testing$read_idx
 
 ## Running Chromunity
 this_re_chrom = re_chromunity(concatemers = this_gr_training, windows = targets_exome, #targets_EP
-                              piecewise = FALSE, shave = TRUE, resolution = 1e4, mc.cores = 5) #2.5e4 4e4
+                              piecewise = FALSE, shave = TRUE, resolution = 2.5e4, mc.cores = 5) #1e4 4e4
 
 
 ## Frag counts
