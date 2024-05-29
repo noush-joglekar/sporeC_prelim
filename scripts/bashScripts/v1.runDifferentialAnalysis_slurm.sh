@@ -13,11 +13,11 @@
 #SBATCH --mail-user=ajoglekar@nygenome.org
 #SBATCH --mail-type=FAIL
 
-echo "Starting at:" `date` 
+echo "Starting at:" `date`
 
 echo "This is job number:" $SLURM_JOB_ID
 echo "Running on node:" `hostname`
-echo "Running on cluster:" $SLURM_CLUSTER_NAME 
+echo "Running on cluster:" $SLURM_CLUSTER_NAME
 echo "This job was assigned the temporary (local) directory:" $TMPDIR
 
 source activate hypergraph_poreC

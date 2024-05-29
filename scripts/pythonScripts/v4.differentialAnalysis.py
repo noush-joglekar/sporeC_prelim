@@ -42,7 +42,8 @@ def normalizeMats(args,fPath,cT,outDir):
         return(npm)
     else:
         print("Main file does not exist - quitting program")
-        exit
+        print(fPath)
+        sys.exit()
 
 def plotNormMatToPDF(args,normMat,cT,outDir):
     outname = f'{outDir}/normProjMat_card{args.card}_{args.chrom}_{cT}.pdf'
@@ -201,7 +202,7 @@ def clusterToGetCommunities(args,G,cT,normalized_weights,outDir):
     for node, community_id in partition.items():
         if community_id not in color_map:
             color_map[community_id] = (random.random(), random.random(), random.random())  # RGB color tuple
-    
+
     print("Plotting louvain")
     outname = f'{outDir}/coloredByCommunity_{cT}_weightedReadByBin_card{args.card}_{args.chrom}.pdf'
     # Plot the graph with nodes colored by community
@@ -289,7 +290,7 @@ def runCycle(args,f1,f2,d1,d2,chromSizes,outDir):
         chrFile_wBinID = formatReadFile_wBinID(args,bedFile,chromSizes)
         impReads = getImpReadsPerCT(epm)
         reformatFileAndSubsetImpReads(args,chrFile_wBinID,impReads,outDir,cT)
-        return()
+    return()
 
 def parse_args():
     print("Parsing arguments")
@@ -303,7 +304,7 @@ def parse_args():
     parser.add_argument("ct1",type=str, help="cell line 1")
     parser.add_argument("ct2",type=str, help="cell line 2")
     return parser.parse_args()
-    
+ 
 def main():
     args = parse_args()
     #dfDir = f'{args.dataDir}{args.runDir}dfs_{args.chrom}/' ### don't need???
