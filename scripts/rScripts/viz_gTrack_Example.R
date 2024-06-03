@@ -41,7 +41,6 @@ view_range = GRanges('chr11:500001-135000000')
 
 plot(gTrack(split(gm_gr, gm_gr$readID) %>% unname, height = 10, name = 'GM12878'), view_range)
 
-
 ## Random stats 
 hg_genes = unique(hg$Gene)
 hcc_genes = unique(hcc$Gene)
