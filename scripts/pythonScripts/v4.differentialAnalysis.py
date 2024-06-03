@@ -271,7 +271,7 @@ def finalBounded_fromEdge(edge,maxPossLen):
 
 def readBed(args, cT):
     print("Reading in BED file, takes a while depending on size")
-    readConcatemersWClosestGene = f'{args.dataDir}/NlaIII_{cT}_output_byChr/NlaIII_{cT}_{args.chrom}.gz'
+    readConcatemersWClosestGene = f'{args.dataDir}/{args.re}_{cT}_output_byChr/{args.re}_{cT}_{args.chrom}.gz'
     colnames = ["chr","start","end","readID","readLen","readQual",
 "geneChr","geneStart","geneEnd","strand","geneID","bioType","geneName","dist","ID"]
     fullBed = pd.read_csv(readConcatemersWClosestGene,sep = "\t",names = colnames)
@@ -303,6 +303,7 @@ def parse_args():
     parser.add_argument("card",type=int, help="read card")
     parser.add_argument("ct1",type=str, help="cell line 1")
     parser.add_argument("ct2",type=str, help="cell line 2")
+    parser.add_argument("--re",type=str,help="Name of restriction enzyme used", default = "NlaIII")
     return parser.parse_args()
  
 def main():

@@ -7,7 +7,7 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --job-name=plotProj
 #SBATCH --time=02:00:00   # HH/MM/SS
-#SBATCH --mem=32G   # memory requested, units available: K,M,G,T
+#SBATCH --mem=80G   # memory requested, units available: K,M,G,T
 #SBATCH --mail-user=ajoglekar@nygenome.org
 #SBATCH --mail-type=ALL
 
