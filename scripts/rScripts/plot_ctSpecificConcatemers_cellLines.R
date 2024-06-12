@@ -10,6 +10,9 @@ library(igraph)
 library(gTrack)
 library(rtracklayer)
 
+library(ComplexHeatmap)
+library(circlize)
+
 args <- commandArgs(trailing = TRUE)
 
 # Setup -----
@@ -98,6 +101,28 @@ pdf(paste0(plotDir,'both_',ct1,'_',ct2,'_card',card,'_',chrom,'_fullGR.pdf'),15,
 plot(c(gTrack(split(ct1_gr, ct1_gr$readID) %>% unname, height = 10, name = ct1),
        gTrack(split(ct2_gr, ct2_gr$readID) %>% unname, height = 10, name = ct2)))
 dev.off()
+
+
+## Get corresponding clusters (not sure why) ------
+
+jacMat <- matrix(0, length(ic_gr), length(ic_gr_ct2))
+rownames(jacMat) <- paste0("C",(1:length(ic_gr)-1))
+colnames(jacMat) <- paste0("C",(1:length(ic_gr_ct2)-1))
+
+for (c1 in 1:length(ic_gr)){
+  gl1 = ic_gr[[c1]]$Gene
+  for (c2 in 1:length(ic_gr_ct2)){
+    gl2 = ic_gr_ct2[[c2]]$Gene
+    li = length(intersect(gl1,gl2))
+    lu = length(union(gl1,gl2))
+    jacMat[c1,c2] <- (li / lu)
+  }
+}
+
+col_fun <- circlize::colorRamp2(c(0,0.5,1),colors = c("white","pink","maroon"))
+Heatmap(jacMat,name = chrom, col = col_fun,row_title = ct1,column_title = ct2, border = "grey50",
+        show_column_dend = F, show_row_dend = F)
+
 
 
 
