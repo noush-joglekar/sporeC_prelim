@@ -6,6 +6,24 @@ import os
 
 from utils import flatten
 
+## Taking next two functions from Carlos
+from scipy.spatial.distance import cdist
+
+def chain_from_file(df):
+    """Given x,y,z coordinates of chains, read into array"""
+    x = df[df.columns[0]] #takes first column of the df
+    y = df[df.columns[1]] #similarly for the second column
+    z = df[df.columns[2]] #similarly for the third column
+    a = [np.array([x[i], y[i], z[i]]) for i in range(len(x))] #get all the coordinates of the monomers and store them in a list
+    return a
+
+def interactions_from_chains(chain):
+    """Given an array of coordinates, convert into df and 
+    find pairwise distances"""
+    df = pd.DataFrame(chain)
+    distances = cdist(df, df)
+    return distances
+
 def increaseIncDF_binSize(df,binSize):
     """This collapses consective bins in an incidence DF
     to reduce dimensions. This also means that some multiway
