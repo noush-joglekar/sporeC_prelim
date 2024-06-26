@@ -92,8 +92,11 @@ class IncDFCreator:
     def assessMultiway(self, slice):
         """How many 2-way contacts fall below secondary cutoff"""
         total = np.count_nonzero(slice)
-        passThresh = np.count_nonzero(slice[slice < self.sec_cutoff])
-        ratio = passThresh / total
+        if total > 0:
+            passThresh = np.count_nonzero(slice[slice < self.sec_cutoff])
+            ratio = passThresh / total
+        else:
+            ratio = 0
         return(ratio)
         
     def perRow(self, args):
@@ -116,6 +119,8 @@ class IncDFCreator:
             for ix in range(2, len(possNeighbors)):
                 for comb in combinations(possNeighbors, ix):
                     d = chainMat_triu[np.ix_(comb, comb)]
+                    # if d.shape[0] == 0:
+                    #     print(d.shape)
                     ratioUnderThresh = self.assessMultiway(d)
                     if ratioUnderThresh >= 0.5:
                         new_column = np.zeros(self.nrow)
