@@ -9,7 +9,7 @@ sys.path.append('/gpfs/commons/groups/gursoy_lab/ajoglekar/Projects/2023_03_01_m
 from v1_chains import IncDFCreator
 from chains import dfToDict, chain_from_file, interactions_from_chains
 
-def processFile(args, distMat, int1, int2):
+def processFile(args, distMat, int1, int2, dataDir):
 
     creator = IncDFCreator(args.num_processes, args.prim_cutoff, args.sec_cutoff, args.offDiagDist)
 
@@ -31,10 +31,10 @@ def processFile(args, distMat, int1, int2):
 
     if saveStatus == "10":
         print("Yes! Writing output part 1")
-        file_path = f'{args.outDir}incDF_{args.offDiagDist}_{args.prim_cutoff}_{args.sec_cutoff}_{args.file_num}.pkl'
+        file_path = f'{dataDir}/{args.outDir}incDF_{args.offDiagDist}_{args.prim_cutoff}_{args.sec_cutoff}_{args.file_num}.pkl'
         exChain.to_pickle(file_path)
 
-        file_path = f'{args.outDir}incDict_{args.offDiagDist}_{args.prim_cutoff}_{args.sec_cutoff}_{args.file_num}.pkl'
+        file_path = f'{dataDir}/{args.outDir}incDict_{args.offDiagDist}_{args.prim_cutoff}_{args.sec_cutoff}_{args.file_num}.pkl'
         with open(file_path,'wb') as pklFile:
             pickle.dump(inc_dict,pklFile)
 
@@ -43,7 +43,7 @@ def processFile(args, distMat, int1, int2):
               args.offDiagDist, saveStatus, args.cellType]
     
     report_string = '\t'.join(map(str,report))
-    file_path = f'{args.outDir}summary.txt'
+    file_path = f'{dataDir}/{args.outDir}summary.txt'
     with open(file_path, 'a') as file:
         file.write(report_string + '\n')
               
@@ -100,7 +100,7 @@ def main():
         int2 = intList[1]
 
     distMat = createDistDF(args,dataDir)
-    processFile(args, distMat, int1, int2)
+    processFile(args, distMat, int1, int2, dataDir)
     return 
 
 

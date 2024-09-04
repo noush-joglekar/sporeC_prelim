@@ -75,6 +75,30 @@ def combineChunkedBIncDicts(chainDict,resultDict):
         resultDict[key] = tmpList
     return(resultDict)
 
+
+def appendSingleDict(chainDict,resultDict):
+    """Same as above when ratio is not being recorded"""
+    for key, value in chainDict.items():
+        tmpList = resultDict.get(key,[])
+        if tmpList:
+            tmpList += value
+        else:
+            tmpList = value
+        resultDict[key] = tmpList
+    return(resultDict)
+
+def combineChunkedDicts(chainDict,resultDict):
+    """Same as above without ratios"""
+    for key, value in chainDict.items():
+        tmpList = resultDict.get(key,[])
+        card = len(key.split("_"))
+        if tmpList:
+            tmpList[0] += value
+        else:
+            tmpList = [value,card]
+        resultDict[key] = tmpList
+    return(resultDict)
+
 class IncDFCreator:
     """Replacing this function: makeIncDF_fromChainDists"""
     def __init__(self, numProcesses, prim_cutoff, sec_cutoff, offDiagLim):
@@ -111,10 +135,12 @@ class IncDFCreator:
         ratioVec = []
         self.nrow = chainMat_triu.shape[0]
         vec = chainMat_triu[row_ix, row_ix + self.offDiagLim:]
+        #print(vec)
         #condition1 = (0 < vec)
         condition2 = (vec < self.prim_cutoff)
         possNeighbors = [row_ix + self.offDiagLim + index for index in np.where(condition2)[0]]
         possNeighbors.insert(0, row_ix)
+        #print(possNeighbors)
         if possNeighbors:
             for ix in range(2, len(possNeighbors)):
                 for comb in combinations(possNeighbors, ix):
